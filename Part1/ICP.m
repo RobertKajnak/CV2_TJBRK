@@ -12,6 +12,7 @@ function [R,t] = ICP(A1,A2,psi)
     end
     
     [n,d] = size(A1);
+    %TODO add the weights W
     
     R=eye(3);
     t=[0 0 0]';
@@ -33,12 +34,12 @@ function [R,t] = ICP(A1,A2,psi)
         used = zeros(1,n);
         for i=1:n
             if mod(i*10,n)==0
-                fprintf('%d%% ',i/n);
+                fprintf('%d%% ',i*100/n);
             end
             for j=1:n
                 diff = norm(A2(j,:)'-R*A1(i,:)' + t);
-                if (diff<e) %&& (used(i)==0)
-                    %used(i)=1;
+                if (diff<e) && (used(i)==0)
+                    used(i)=1;
                     e = diff;
                     ind = j;
                 end
@@ -72,7 +73,7 @@ function [R,t] = ICP(A1,A2,psi)
         fprintf('Step 4: ');
         for i=1:n
             if mod(i*10,n)==0
-                fprintf('%d%% ',i/n);
+                fprintf('%d%% ',i*100/n);
             end
            diffSum =diffSum + norm(Q(i,:)'-R*P(i,:)' + t).^2;
         end
