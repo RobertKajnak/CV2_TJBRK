@@ -48,8 +48,7 @@
             end
             Q(i,:) = A2(ind,:);
         end
-        time1=toc;
-        fprintf('; In: %d\n',time1);
+        fprintf('; Finished in: %.2f seconds\n',toc);
         
         % Mininimization target
         Mt=0;
@@ -73,7 +72,7 @@
         t = qbar - R*pbar;
 
         diffSum = 0;
-        time1=toc;
+        tic
         fprintf('Step 4: ');
         for i=1:n
             if mod(i*10,n)==0
@@ -82,8 +81,7 @@
             P(i,:) = R*P(i,:)' + t;
             diffSum =diffSum + norm(Q(i,:)'-P(i,:)').^2;
         end
-        time1 = toc-time1;
-        fprintf('; In: %d\n',time1);
+        fprintf('; Finished in: %.2f seconds\n',toc);
         
         RMS=sqrt(diffSum/n)
     end
