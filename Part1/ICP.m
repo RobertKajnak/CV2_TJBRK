@@ -19,7 +19,7 @@ function [R,t] = ICP(A1,A2,psi)
     RMS = 1;
     k=1;
     while abs(RMSold-RMS)>1e-2
-        fprintf('Attempt %d',k);
+        fprintf('Attempt %d\n',k);
         k=k+1;
         RMSold = RMS;
         P = A1;
@@ -30,13 +30,15 @@ function [R,t] = ICP(A1,A2,psi)
         %find best matches from A2 for transfomation from A1
         
         fprintf('Step 2: ');
+        used = zeros(1,n);
         for i=1:n
             if mod(i*10,n)==0
-                fprintf('%d\% ',i/n);
+                fprintf('%d%% ',i/n);
             end
             for j=1:n
-                diff = A2(j,:)'-R*A1(i,:)' + t;
-                if diff<e
+                diff = norm(A2(j,:)'-R*A1(i,:)' + t);
+                if (diff<e) %&& (used(i)==0)
+                    %used(i)=1;
                     e = diff;
                     ind = j;
                 end
@@ -70,7 +72,7 @@ function [R,t] = ICP(A1,A2,psi)
         fprintf('Step 4: ');
         for i=1:n
             if mod(i*10,n)==0
-                fprintf('%d\% ',i/n);
+                fprintf('%d%% ',i/n);
             end
            diffSum =diffSum + norm(Q(i,:)'-R*P(i,:)' + t).^2;
         end
