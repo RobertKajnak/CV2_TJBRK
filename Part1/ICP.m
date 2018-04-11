@@ -1,15 +1,15 @@
-function [R,t] = ICP(A1,A2,psi)
-%   ICP - 
-%   A1, A2 - point cloud, dimension N*3
-%   psi - transformation function
-    if nargin==0
+% function [R,t] = ICP(A1,A2,psi)
+% %   ICP - 
+% %   A1, A2 - point cloud, dimension N*3
+% %   psi - transformation function
+%     if nargin==0
         A1=load('data/source.mat');
         A1=A1.source';
         A2=load('data/target.mat');
         A2=A2.target';
-    elseif nargin <3 
-        psi = @(x,R,t) m * x -t; 
-    end
+%     elseif nargin <3 
+%         psi = @(x,R,t) m * x -t; 
+%     end
     
     [n,d] = size(A1);
     %TODO add the weights W
@@ -19,7 +19,9 @@ function [R,t] = ICP(A1,A2,psi)
     RMSold = 0;
     RMS = 1;
     k=1;
-    while abs(RMSold-RMS)>1e-2
+    figure;
+    fscatter3(A1(:,1),A1(:,2),A1(:,3),1:size(A1,1));
+    while abs(RMSold-RMS)>1e-2 && k<3
         fprintf('Attempt %d\n',k);
         k=k+1;
         RMSold = RMS;
@@ -27,9 +29,9 @@ function [R,t] = ICP(A1,A2,psi)
         Q = zeros(size(A2));
         e = inf;
         ind = 0;
-        % TODO already matched points should be removed from A2
-        %find best matches from A2 for transfomation from A1
         
+        %find best matches from A2 for transfomation from A1
+        tic
         fprintf('Step 2: ');
         used = zeros(1,n);
         for i=1:n
@@ -46,8 +48,9 @@ function [R,t] = ICP(A1,A2,psi)
             end
             Q(i,:) = A2(ind,:);
         end
-        fprintf('\n');
-
+        time1=toc;
+        fprintf('; In: %d\n',time1);
+        
         % Mininimization target
         Mt=0;
         for i=1:n
@@ -70,15 +73,20 @@ function [R,t] = ICP(A1,A2,psi)
         t = qbar - R*pbar;
 
         diffSum = 0;
+        time1=toc;
         fprintf('Step 4: ');
         for i=1:n
             if mod(i*10,n)==0
                 fprintf('%d%% ',i*100/n);
             end
-           diffSum =diffSum + norm(Q(i,:)'-R*P(i,:)' + t).^2;
+            P(i,:) = R*P(i,:)' + t;
+            diffSum =diffSum + norm(Q(i,:)'-P(i,:)').^2;
         end
-        fprintf('\n');
+        time1 = toc-time1;
+        fprintf('; In: %d\n',time1);
         
         RMS=sqrt(diffSum/n)
     end
-end
+    hold on;
+    fscatter3([A1(:,1);P(:,1);A2(:,1)],[A1(:,2);P(:,2);A2(:,2)],[A1(:,3);P(:,3);A2(:,3)],1:n*3);
+%end
