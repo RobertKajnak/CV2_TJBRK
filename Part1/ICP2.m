@@ -10,10 +10,9 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
 %
 %   See also MERGE    
     if nargin < 7
-        verbose =0;
+        verbose = 0;
     end
     
-%TODO different kinds of sampling, uniform(?) below?
     %max number of elements; safeguards against different lengths
     n = min(size(pc1,1),size(pc2,1));
     
@@ -67,6 +66,10 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
 
     if verbose
         fprintf('Variables initialized\n');
+        if verbose == 2
+            fileID = fopen('log.csv','w');
+            fprintf(fileID,'MSE,RMS,time_sec\n');
+        end
     end
     %TODO implement oscillation rejection
     while abs(RMSold-RMS)>rms && k<max_repeats
@@ -121,13 +124,24 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             P(i,:) = (R*P(i,:)' + t)';
             diffSum =diffSum + norm( P(i,:)' - Q(i,:)'  )^2;
         end
-        RMS=sqrt(diffSum/n);
+        MSE = diffSum/n;
+        RMS = sqrt(MSE);
         
         if verbose
-            fprintf('iteration %d took %f seconds; RMS =%f\n',k,toc,RMS);
+            t = toc;
+            fprintf('iteration %d took %f seconds; RMS =%f; MSE=%f\n',k,t,RMS,MSE);
+            if verbose==2
+                fprintf(fileID,'%f,%f,%f\n',MSE,RMS,t);
+            end
         end
     end
     %fprintf(' \n');
-    
+    if verbose
+        fprintf('\n');
+        if verbose==2
+            fprintf(fileID,'\n');
+            fclose(fileID);
+        end
+    end
     
 end

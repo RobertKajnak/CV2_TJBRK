@@ -1,4 +1,4 @@
-type = 1;
+type = 0;
 
 switch type
     case 0
@@ -9,9 +9,9 @@ switch type
     case 1
         % sinusoid+noise
         A1=load('data/source.mat');
-        pc1=awgn(A1.source',50,'measured');
+        pc1=awgn(A1.source',20,'measured');
         A2=load('data/target.mat');
-        pc2=awgn(A2.target',50,'measured');
+        pc2=awgn(A2.target',20,'measured');
     case 2 
         pc1 = readPcd('Data/data/0000000000.pcd');
         pc2 = readPcd('Data/data/0000000003.pcd');
@@ -23,7 +23,7 @@ switch type
         pc2 = pc2(:,1:3);
 end
 %[R,t]  = ICP2(pc1,pc2,samples,sampling,max_repeats,rms)
-[R,t] = ICP2(pc1,pc2,500,2,2,0.00005,1);
+[R,t] = ICP2(pc1,pc2,500,1,3,0.000005,2);
 
 %blue
 blue = zeros(size(pc1,1),1);
