@@ -1,4 +1,4 @@
-function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
+function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
 % IPC2  Calculate the rotation and translation matrices using IPC
 %   PC1 origin point cloud of form [n,d], n=number of points, d=dimension
 %   PC2 target point cloud of form [m,d]. if m~=n min(n,m) will be considered 
@@ -9,7 +9,6 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
 %               3 = sub-sampling from informative regions
 %
 %   See also MERGE    
-
     if nargin < 7
         verbose =0;
     end
@@ -24,18 +23,29 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
     
     switch sampling
         case 1
-            ran = randsample(1:n,samples);
-            pc1 = pc1(ran,:);
-            ran = randsample(1:n,samples);
-            pc2 = pc2(ran,:);
+            %uniform subsampling
+%             ran = randsample(1:size(pc1,1),samples);
+%             pc1 = pc1(ran,:);
+%             ran = randsample(1:size(pc1,1),samples);
+%             pc2 = pc2(ran,:);
+            pc1 = datasample(pc1,samples,1,'Replace',false);
+            pc2 = datasample(pc2,samples,1,'Replace',false);
             n = samples;
         case 2
+            %random subsampling;
+            %store original point clouds in pc1o
+            pc1o = pc1;
+            pc2o = pc2;
+            n = samples;
         case 3
         otherwise
             %all points, nothing to be done here
     end
 
-    %if the sizes
+    if n>2500
+        warning('The use of more than than 2500 points requested. More than 120s/iteration may be necessary');
+    end
+    
     %check if the input clours are of the same dimensionality
     if size(pc1,2) ~= size(pc2,2)
         error('The two points clouds should have same dimensionality; %d~=%d'...
@@ -46,8 +56,10 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
     
     %TODO add the weights W
     
-    R=eye(3);
-    t=[0 0 0];
+    if nargin<8
+        R=eye(3);
+        t=[0 0 0];
+    end
     RMSold = 0;
     RMS = inf;
     k=0;
@@ -56,8 +68,14 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
     if verbose
         fprintf('Variables initialized\n');
     end
+    %TODO implement oscillation rejection
     while abs(RMSold-RMS)>rms && k<max_repeats
         tic 
+        
+        if sampling==2
+            pc1 = datasample(pc1o,samples,1,'Replace',false);
+            pc2 = datasample(pc2o,samples,1,'Replace',false);
+        end
         
         k=k+1;
         RMSold = RMS;
@@ -106,8 +124,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose)
         RMS=sqrt(diffSum/n);
         
         if verbose
-            fprintf('RMS= %f\n',RMS);
-            fprintf('iteration %d took %f seconds\n',k,toc);
+            fprintf('iteration %d took %f seconds; RMS =%f\n',k,toc,RMS);
         end
     end
     %fprintf(' \n');
