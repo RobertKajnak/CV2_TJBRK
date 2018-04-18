@@ -12,6 +12,9 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     if nargin < 7
         verbose = 0;
     end
+    %TODO k-d
+    %TODO GPU
+    %TODO weights(and others)
     
     %max number of elements; safeguards against different lengths
     n = min(size(pc1,1),size(pc2,1));
@@ -23,10 +26,6 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     switch sampling
         case 1
             %uniform subsampling
-%             ran = randsample(1:size(pc1,1),samples);
-%             pc1 = pc1(ran,:);
-%             ran = randsample(1:size(pc1,1),samples);
-%             pc2 = pc2(ran,:);
             pc1 = datasample(pc1,samples,1,'Replace',false);
             pc2 = datasample(pc2,samples,1,'Replace',false);
             n = samples;
@@ -42,7 +41,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     end
 
     if n>2500
-        warning('The use of more than than 2500 points requested. More than 120s/iteration may be necessary');
+        warning('The use of more than than 2500 points requested. More than 200s/iteration may be necessary');
     end
     
     %check if the input clours are of the same dimensionality
@@ -52,9 +51,6 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     else
         d = size(pc1,2);
     end
-    
-    %TODO add the weights W
-    
     if nargin<8
         R=eye(3);
         t=[0 0 0];
@@ -62,7 +58,6 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     RMSold = 0;
     RMS = inf;
     k=0;
-    
 
     if verbose
         fprintf('Variables initialized\n');
@@ -102,12 +97,10 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         
         p_bar = mean(P);
         q_bar = mean(Q);
-
         X = P - p_bar;
         Y = Q - q_bar;
 
         %Step 3
-        %multiplication should be the correct way round
         S = X'*Y;
 
         %Step 4;
@@ -135,7 +128,8 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             end
         end
     end
-    %fprintf(' \n');
+    
+    %Add new line in console and close file
     if verbose
         fprintf('\n');
         if verbose==2
