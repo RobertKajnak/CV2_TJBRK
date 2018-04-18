@@ -20,8 +20,8 @@
     RMS = 1;
     k=1;
     figure;
-    fscatter3(A1(:,1),A1(:,2),A1(:,3),1:size(A1,1));
-    while abs(RMSold-RMS)>1e-2 && k<3
+    %fscatter3(A1(:,1),A1(:,2),A1(:,3),1:size(A1,1));
+    while abs(RMSold-RMS)>1e-2 && k<5
         fprintf('Attempt %d\n',k);
         k=k+1;
         RMSold = RMS;
@@ -35,12 +35,14 @@
         fprintf('Step 2: ');
         used = zeros(1,n);
         for i=1:n
+            e=inf;
+            ind=0;
             if mod(i*10,n)==0
                 fprintf('%d%% ',i*100/n);
             end
             for j=1:n
-                diff = norm(A2(j,:)'-R*A1(i,:)' + t);
-                if (diff<e) && (used(i)==0)
+                diff = norm(A2(j,:)'-R*A1(i,:)' - t);
+                if (diff<e) %&& (used(i)==0)
                     used(i)=1;
                     e = diff;
                     ind = j;
