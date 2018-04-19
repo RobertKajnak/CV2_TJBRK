@@ -37,9 +37,17 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             n = samples;
         case 3
         otherwise
+            pc1 = datasample(pc1,samples,1,'Replace',false);
+            pc2 = datasample(pc2,samples,1,'Replace',false);
             %all points, nothing to be done here
     end
-
+    if sampling ~= 2
+        %Because of the inner for-loop, each worker would create it's
+        %own copy of pc2, which increases overhead
+        %pc2p = parallel.pool.Constant(pc2);
+        %pc2pt = parallel.pool.Constant(pc2');
+    end
+    
     if n>2500
         warning('The use of more than than 2500 points requested. More than 200s/iteration may be necessary');
     end
@@ -73,6 +81,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         if sampling==2
             pc1 = datasample(pc1o,samples,1,'Replace',false);
             pc2 = datasample(pc2o,samples,1,'Replace',false);
+            %pc2p = parallel.pool.Constant(pc2);
         end
         
         k=k+1;
@@ -81,9 +90,10 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         P = pc1;
         Q = zeros([n,d]);
        
+
         %find best matches from A2 for transfomation from A1
-        ind = 0;
-        for i=1:n
+        parfor i=1:n
+            ind = 0;
             e = inf;
             for j=1:n
                 diff = norm( (R*pc1(i,:)' + t') - pc2(j,:)');
@@ -127,6 +137,8 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
                 fprintf(fileID,'%f,%f,%f\n',MSE,RMS,t);
             end
         end
+        R
+        t
     end
     
     %Add new line in console and close file
