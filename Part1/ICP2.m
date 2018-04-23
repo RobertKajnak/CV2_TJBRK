@@ -37,8 +37,6 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             n = samples;
         case 3
         otherwise
-            pc1 = datasample(pc1,samples,1,'Replace',false);
-            pc2 = datasample(pc2,samples,1,'Replace',false);
             %all points, nothing to be done here
     end
     if sampling ~= 2
@@ -48,8 +46,8 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         %pc2pt = parallel.pool.Constant(pc2');
     end
     
-    if n>2500
-        warning('The use of more than than 2500 points requested. More than 200s/iteration may be necessary');
+    if n>20000
+        warning('The use of more than than 20000 points requested. More than 200s/iteration may be necessary');
     end
     
     %check if the input clours are of the same dimensionality
@@ -131,14 +129,12 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         RMS = sqrt(MSE);
         
         if verbose
-            t = toc;
-            fprintf('iteration %d took %f seconds; RMS =%f; MSE=%f\n',k,t,RMS,MSE);
+            time = toc;
+            fprintf('iteration %d took %f seconds; RMS =%f; MSE=%f\n',k,time,RMS,MSE);
             if verbose==2
                 fprintf(fileID,'%f,%f,%f\n',MSE,RMS,t);
             end
         end
-        R
-        t
     end
     
     %Add new line in console and close file
