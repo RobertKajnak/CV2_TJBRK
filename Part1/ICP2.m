@@ -61,15 +61,22 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         R=eye(3);
         t=[0 0 0];
     end
-    RMSold = 0;
-    RMS = inf;
+    RMSold = inf;
+    diffSum = 0;
+    for i=1:n
+        diffSum =diffSum + norm( pc1(i,:)' - pc2(i,:)'  )^2;
+    end
+    MSE = diffSum/n;
+    RMS = sqrt(MSE);   
     k=0;
 
     if verbose
         fprintf('Variables initialized\n');
+        fprintf('Baseline RMS=%f; MSE=%f\n',RMS,MSE);
         if verbose == 2
             fileID = fopen('log.csv','w');
             fprintf(fileID,'MSE,RMS,time_sec\n');
+            fprintf(fileID,'%f,%f,0.0',MSE,RMS);
         end
     end
     %TODO implement oscillation rejection
@@ -132,7 +139,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             time = toc;
             fprintf('iteration %d took %f seconds; RMS =%f; MSE=%f\n',k,time,RMS,MSE);
             if verbose==2
-                fprintf(fileID,'%f,%f,%f\n',MSE,RMS,t);
+                fprintf(fileID,'%f,%f,%f\n',MSE,RMS,time);
             end
         end
     end
