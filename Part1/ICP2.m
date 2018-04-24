@@ -1,18 +1,29 @@
-function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
+function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,t)
 % IPC2  Calculate the rotation and translation matrices using IPC
 %   PC1 origin point cloud of form [n,d], n=number of points, d=dimension
 %   PC2 target point cloud of form [m,d]. if m~=n min(n,m) will be considered 
 %   SAMPLES amount of samples used to calculate matrices
-%   SAMPLING    0 = all points; SAMPLES will be ignored
+%   SAMPLING    0 = all points; SAMPLES will be ignored. If sizes do not
+%                   match, the first n=min(samples_pc1,samples_pc2) will be
+%                   selected
 %               1 = uniform sub-sampling
 %               2 = random sub-sampling
 %               3 = sub-sampling from informative regions
 %
-%   See also MERGE    
+%   See also MERGE
+    
+    %% Set variables such as missing arguments, subsampling etc.
     if nargin < 7
         verbose = 0;
     end
-    %TODO k-d
+    if nargin<8
+        method='bruteforce';
+    end
+    
+    if strcmp(method,'knn')
+        %pc1 = kd_buildtree(pc1);
+        tree = kd_buildtree(pc2);
+    end
     %TODO GPU
     %TODO weights(and others)
     
@@ -37,7 +48,11 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             n = samples;
         case 3
         otherwise
-            %all points, nothing to be done here
+            %all points, select subset of points that allow pc1 and pc2 
+            %sizes to match
+            n = min(size(pc1,1),size(pc2,1));
+            pc1 = pc1(1:n,:);
+            pc2 = pc2(1:n,:);
     end
     if sampling ~= 2
         %Because of the inner for-loop, each worker would create it's
@@ -57,9 +72,9 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
     else
         d = size(pc1,2);
     end
-    if nargin<8
+    if nargin<9
         R=eye(3);
-        t=[0 0 0];
+        t=[0 0 0]';
     end
     RMSold = inf;
     diffSum = 0;
@@ -76,11 +91,14 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         if verbose == 2
             fileID = fopen('log.csv','w');
             fprintf(fileID,'MSE,RMS,time_sec\n');
-            fprintf(fileID,'%f,%f,0.0',MSE,RMS);
+            fprintf(fileID,'%f,%f,0.0\n',MSE,RMS);
         end
     end
     %TODO implement oscillation rejection
+    %% Main forloop
+    P = pc1;
     while abs(RMSold-RMS)>rms && k<max_repeats
+        k=k+1;
         tic 
         
         if sampling==2
@@ -89,31 +107,41 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
             %pc2p = parallel.pool.Constant(pc2);
         end
         
-        k=k+1;
         RMSold = RMS;
         
-        P = pc1;
         Q = zeros([n,d]);
-        
-        %find best matches from A2 for transfomation from A1
-        parfor i=1:n
-            e=inf;
-            ind=0;
-            for j=1:n
-                diff = norm(pc2(j,:)'-R*pc1(i,:)' - t);
-                if (diff<e)
-                    e = diff;
-                    ind = j;
-                end
-            end
-            Q(i,:) = pc2(ind,:);
+        if strcmp(method,'asis')
+            Q = pc2(1:n,:);
         end
         
-        p_bar = mean(P);
+        %find best matches from A2 for transfomation from A1
+        if strcmp(method,'bruteforce')
+            parfor i=1:n
+                e=inf;
+                ind=0;
+                for j=1:n
+                    diff = norm(pc2(j,:)'-P(i,:)');
+                    if (diff<e)
+                        e = diff;
+                        ind = j;
+                    end
+                end
+                Q(i,:) = pc2(ind,:);
+            end
+        elseif strcmp(method,'knn')
+            for i=1:n
+                point = R*P(i,:)+t;
+                [index_vals,vec_vals,node_number] = kd_closestpointgood(tree,point)
+                
+            end
+        end
+                
+        
+        p_bar = mean(pc1);
         q_bar = mean(Q);
-        X = P - p_bar;
+        
+        X = pc1 - p_bar;
         Y = Q - q_bar;
-
         %Step 3
         S = X'*Y;
 
@@ -128,7 +156,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         %calculate RMS
         diffSum = 0;
         for i=1:n
-            P(i,:) = (R*P(i,:)' + t)';
+            P(i,:) = (R*pc1(i,:)' + t)';
             diffSum =diffSum + norm( P(i,:)' - Q(i,:)'  )^2;
         end
         MSE = diffSum/n;
