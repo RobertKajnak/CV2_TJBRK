@@ -94,21 +94,20 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,R,t)
         
         P = pc1;
         Q = zeros([n,d]);
-       
-
+        
         %find best matches from A2 for transfomation from A1
         parfor i=1:n
-            ind = 0;
-            e = inf;
+            e=inf;
+            ind=0;
             for j=1:n
-                diff = norm( (R*pc1(i,:)' + t') - pc2(j,:)');
-                if (diff<e) 
+                diff = norm(pc2(j,:)'-R*pc1(i,:)' - t);
+                if (diff<e)
                     e = diff;
                     ind = j;
                 end
             end
             Q(i,:) = pc2(ind,:);
-        end 
+        end
         
         p_bar = mean(P);
         q_bar = mean(Q);
