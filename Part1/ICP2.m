@@ -1,4 +1,4 @@
-function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,t)
+function [R,t] = ICP2(pc1,pc2,varargin)
 % IPC2  Calculate the rotation and translation matrices using IPC
 %   PC1 origin point cloud of form [n,d], n=number of points, d=dimension
 %   PC2 target point cloud of form [m,d]. if m~=n min(n,m) will be considered 
@@ -11,15 +11,37 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
 %               3 = sub-sampling from informative regions
 %
 %   See also MERGE
+%
+%   K-D tree implementation by Pramod Vemulapalli, downloaded from 
+%   https://nl.mathworks.com/matlabcentral/fileexchange/26649-kdtree-implementation-in-matlab
     
-    %% Set variables such as missing arguments, subsampling etc.
-    if nargin < 7
-        verbose = 0;
-    end
-    if nargin<8
-        method='bruteforce';
-    end
+    %% resolve default argumnets and check inputs
+    p = inputParser;
+    validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
+    %TODO these do noth throw errors when they are supposed to
+    possibleMethods = {'asis','bruteforce','knn'};
+    validSampling = {'all','uniform','random','informative'};
+    p.addParameter('samples',2000,validScalarPosNum);
+    p.addParameter('sampling','uniform',@(x)any(validatestring(x,validSampling)));
+    p.addParameter('max_iter',20,validScalarPosNum);
+    p.addParameter('rms',1e-4,validScalarPosNum);
+    p.addParameter('verbose',1,@(x)any(x==[0,1,2]));
+    p.addParameter('method','knn',@(x)any(validatestring(x,possibleMethods)));
+    p.addParameter('R',eye(3));
+    p.addParameter('t',zeros(3,1));
     
+    p.parse(varargin{:});
+    r = p.Results;
+    samples = r.samples;
+    sampling = r.sampling;
+    max_iter = r.max_iter;
+    rms = r.rms;
+    verbose =r.verbose;
+    method = r.method;
+    R= r.R;
+    t= r.t;
+    
+    %% Initialize variables
     if strcmp(method,'knn')
         %pc1 = kd_buildtree(pc1);
         tree = kd_buildtree(pc2,0);
@@ -72,10 +94,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
     else
         d = size(pc1,2);
     end
-    if nargin<9
-        R=eye(3);
-        t=[0 0 0]';
-    end
+    
     RMSold = inf;
     diffSum = 0;
     for i=1:n
@@ -97,7 +116,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
     %TODO implement oscillation rejection
     %% Main forloop
     P = pc1;
-    while abs(RMSold-RMS)>rms && k<max_repeats
+    while abs(RMSold-RMS)>rms && k<max_iter
         k=k+1;
         tic 
         
@@ -180,3 +199,4 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
     end
     
 end
+
