@@ -22,7 +22,7 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
     
     if strcmp(method,'knn')
         %pc1 = kd_buildtree(pc1);
-        tree = kd_buildtree(pc2);
+        tree = kd_buildtree(pc2,0);
     end
     %TODO GPU
     %TODO weights(and others)
@@ -129,10 +129,9 @@ function [R,t] = ICP2(pc1,pc2,samples,sampling,max_repeats,rms,verbose,method,R,
                 Q(i,:) = pc2(ind,:);
             end
         elseif strcmp(method,'knn')
-            for i=1:n
-                point = R*P(i,:)+t;
-                [index_vals,vec_vals,node_number] = kd_closestpointgood(tree,point)
-                
+            parfor i=1:n
+                [~,vec_vals,~] = kd_closestpointgood(tree,P(i,:));
+                Q(i,:) = vec_vals;
             end
         end
                 
