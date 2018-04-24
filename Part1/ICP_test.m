@@ -32,7 +32,7 @@ if gpu
     pc2 = gpuArray(pc2);
 end
 %[R,t]  = ICP2(pc1,pc2,samples,sampling,max_repeats,rms)
-[R,t] = ICP2(pc1,pc2,2000,0,20,0.000005,1,'bruteforce');
+[R,t] = ICP2(pc1,pc2,2000,0,150,0.00003,2,'knn');
 
 %blue
 blue = zeros(size(pc1,1),1);

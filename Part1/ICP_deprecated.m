@@ -16,12 +16,12 @@
     
     R=eye(3);
     t=[0 0 0]';
-    RMSold = 0;
+    RMSold = inf;
     RMS = 1;
     k=1;
     figure;
     %fscatter3(A1(:,1),A1(:,2),A1(:,3),1:size(A1,1));
-    while abs(RMSold-RMS)>1e-2 && k<5
+    while abs(RMSold-RMS)>1e-6 && k<10
         fprintf('Attempt %d\n',k);
         k=k+1;
         RMSold = RMS;
@@ -33,17 +33,26 @@
         %find best matches from A2 for transfomation from A1
         tic
         fprintf('Step 2: ');
-        used = zeros(1,n);
-        for i=1:n
+        %used = zeros(1,n);
+        
+        fprintf('k=%d',k)
+        if k==3
+            fprintf('EXPORTED!')
+            assignin('base','t_1',t)
+            assignin('base','R_1',R)
+            assignin('base','A1_1',A1)
+            assignin('base','A2_1',A2)
+        end
+        parfor i=1:n
             e=inf;
             ind=0;
-            if mod(i*10,n)==0
-                fprintf('%d%% ',i*100/n);
-            end
+            %if mod(i*10,n)==0
+            %    fprintf('%d%% ',i*100/n);
+            %end
             for j=1:n
                 diff = norm(A2(j,:)'-R*A1(i,:)' - t);
                 if (diff<e) %&& (used(i)==0)
-                    used(i)=1;
+                    %used(i)=1;
                     e = diff;
                     ind = j;
                 end
@@ -53,15 +62,15 @@
         fprintf('; Finished in: %.2f seconds\n',toc);
         
         % Mininimization target
-        Mt=0;
-        for i=1:n
-            Mt = Mt + norm(R*P(i)+t-Q(i))^2;
-        end
-        pbar = sum(P)'/n;
-        qbar = sum(Q)'/n;
+%         Mt=0;
+%         for i=1:n
+%             Mt = Mt + norm(R*P(i)+t-Q(i))^2;
+%         end
+        pbar = sum(P)/n
+        qbar = sum(Q)/n
 
-        X=P-pbar';
-        Y=Q-qbar';
+        X=P-pbar;
+        Y=Q-qbar;
 
         %Step 3
         S = X'*Y;
@@ -71,22 +80,29 @@
         Matrix = eye(d);
         Matrix(d,d) = det(V*U');
         R = V*Matrix*U';
-        t = qbar - R*pbar;
+        t = qbar' - R*pbar';
 
         diffSum = 0;
-        tic
+        %tic
         fprintf('Step 4: ');
         for i=1:n
-            if mod(i*10,n)==0
-                fprintf('%d%% ',i*100/n);
-            end
+            %if mod(i*10,n)==0
+            %    fprintf('%d%% ',i*100/n);
+            %end
             P(i,:) = R*P(i,:)' + t;
             diffSum =diffSum + norm(Q(i,:)'-P(i,:)').^2;
         end
-        fprintf('; Finished in: %.2f seconds\n',toc);
+        %fprintf('; Finished in: %.2f seconds\n',toc);
         
-        RMS=sqrt(diffSum/n)
+        MSE=diffSum/n;
+        RMS=sqrt(MSE);
+        fprintf('MSE = %f;RMS=%f\n',MSE,RMS);
     end
     hold on;
-    fscatter3([A1(:,1);P(:,1);A2(:,1)],[A1(:,2);P(:,2);A2(:,2)],[A1(:,3);P(:,3);A2(:,3)],1:n*3);
+    blue = zeros(size(pc1,1),1);
+    blue(:,:) = 0.6;
+    red = zeros(size(pc1,1),1);
+    red(1,1)=1;
+    %fscatter3([A1(:,1);P(:,1);A2(:,1)],[A1(:,2);P(:,2);A2(:,2)],[A1(:,3);P(:,3);A2(:,3)],1:n*3);
+    fscatter3([P(:,1);A2(:,1)],[P(:,2);A2(:,2)],[P(:,3);A2(:,3)],[blue,red]);
 %end
