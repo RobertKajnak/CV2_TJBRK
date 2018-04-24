@@ -1,4 +1,8 @@
+%to set parallel pool with custom settings
+% pp = parpool(8)
+%
 type = 0;
+gpu=0;
 
 switch type
     case 0
@@ -22,8 +26,13 @@ switch type
         pc1 = pc1(:,1:3);
         pc2 = pc2(:,1:3);
 end
+%TODO implement GPU parallelization
+if gpu
+    pc1 = gpuArray(pc1);
+    pc2 = gpuArray(pc2);
+end
 %[R,t]  = ICP2(pc1,pc2,samples,sampling,max_repeats,rms)
-[R,t] = ICP2(pc1,pc2,500,1,3,0.000005,2);
+[R,t] = ICP2(pc1,pc2,2000,0,20,0.000005,1,'bruteforce');
 
 %blue
 blue = zeros(size(pc1,1),1);
@@ -49,18 +58,16 @@ end
 % green: target
 figure
 %Create legend
-h = zeros(3, 1);
 hold on;
 plot3(NaN,NaN,NaN,'or');
 plot3(NaN,NaN,NaN,'ob');
-plot3(NaN,NaN,NaN,'og');
 
 %plot points
 fscatter3(pcnew(:,1),pcnew(:,2),pcnew(:,3),red);
-fscatter3(pc1(:,1),pc1(:,2),pc1(:,3),blue);
+%fscatter3(pc1(:,1),pc1(:,2),pc1(:,3),blue);
 fscatter3(pc2(:,1),pc2(:,2),pc2(:,3),green);
 
-legend({'transformed','target','original'});
-
+%legend({'transformed','target','original'});
+legend({'transformed','target'});
 
 
