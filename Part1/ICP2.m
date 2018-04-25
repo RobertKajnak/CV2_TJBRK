@@ -15,6 +15,8 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 %   K-D tree implementation by Pramod Vemulapalli, downloaded from 
 %   https://nl.mathworks.com/matlabcentral/fileexchange/26649-kdtree-implementation-in-matlab
     
+    %TODO - update doc. Also, since now the number of paramters is not an
+    %issue, maybe add paralellization as one ('none','CPU','GPU')
     %% resolve default argumnets and check inputs
     p = inputParser;
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
@@ -57,18 +59,18 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     end
     
     switch sampling
-        case 1
+        case 'uniform'
             %uniform subsampling
             pc1 = datasample(pc1,samples,1,'Replace',false);
             pc2 = datasample(pc2,samples,1,'Replace',false);
             n = samples;
-        case 2
+        case 'random'
             %random subsampling;
             %store original point clouds in pc1o
             pc1o = pc1;
             pc2o = pc2;
             n = samples;
-        case 3
+        case 'informative'
         otherwise
             %all points, select subset of points that allow pc1 and pc2 
             %sizes to match
