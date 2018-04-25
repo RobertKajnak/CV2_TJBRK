@@ -2,18 +2,34 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 % IPC2  Calculate the rotation and translation matrices using IPC
 %   PC1 origin point cloud of form [n,d], n=number of points, d=dimension
 %   PC2 target point cloud of form [m,d]. if m~=n min(n,m) will be considered 
-%   SAMPLES amount of samples used to calculate matrices
-%   SAMPLING    0 = all points; SAMPLES will be ignored. If sizes do not
-%                   match, the first n=min(samples_pc1,samples_pc2) will be
-%                   selected
-%               1 = uniform sub-sampling
-%               2 = random sub-sampling
-%               3 = sub-sampling from informative regions
+%   'samples'  - amount of samples used to calculate matrices. Default = 2000
+%   'sampling' - 'all' = all points; SAMPLES will be ignored. If sizes do not
+%                       match, the first n=min(samples_pc1,samples_pc2) will be
+%                       selected
+%               'uniform' = uniform sub-sampling. (DEFAULT)
+%               'random' = random sub-sampling: subsampling done at each
+%                       iteration
+%               'informative' = sub-sampling from informative regions
+%   'rms'      - the algorithm stops if rms difference between 2 iterations
+%                is lower than this paramter. Default = 30
+%   'max_iter' - maximum number of iterations, if rms target 
+%                not reached 
+%   'method'   - 'bruteforce' => O(n^2) iterative search for minimum
+%              - 'knn' => DEFAULT. O(n*log(n)) k-d tree based search. 
+%                  Compiled library necessary
+%              - 'asis' => The input point clouds are ordered and matching
+%                 point search is not necessary
+%   'verbose'  - 0=> no output.
+%              - 1=> Console output with time, RMS, MSE each iteration
+%              - 2=> 1 + saves the values to 'log.csv'
+%   'R' & 't'- To continue where a previous search left off or from
+%                custom initial transformation. 
+%                Default: R=eye(3); t=zeros(1,3)
 %
 %   See also MERGE
 %
-%   K-D tree implementation by Pramod Vemulapalli, downloaded from 
-%   https://nl.mathworks.com/matlabcentral/fileexchange/26649-kdtree-implementation-in-matlab
+%   K-D tree implementation by Andrea Tagliasacchi, downloaded from 
+%   https://nl.mathworks.com/matlabcentral/fileexchange/21512-ataiya-kdtree
     
     %TODO - update doc. Also, since now the number of paramters is not an
     %issue, maybe add paralellization as one ('none','CPU','GPU')
@@ -25,8 +41,8 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     validSampling = {'all','uniform','random','informative'};
     p.addParameter('samples',2000,validScalarPosNum);
     p.addParameter('sampling','uniform',@(x)any(validatestring(x,validSampling)));
-    p.addParameter('max_iter',20,validScalarPosNum);
-    p.addParameter('rms',1e-4,validScalarPosNum);
+    p.addParameter('max_iter',30,validScalarPosNum);
+    p.addParameter('rms',1e-5,validScalarPosNum);
     p.addParameter('verbose',1,@(x)any(x==[0,1,2]));
     p.addParameter('method','knn',@(x)any(validatestring(x,possibleMethods)));
     p.addParameter('R',eye(3));
@@ -44,10 +60,6 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     t= r.t;
     
     %% Initialize variables
-    if strcmp(method,'knn')
-        %pc1 = kd_buildtree(pc1);
-        tree = kd_buildtree(pc2,0);
-    end
     %TODO GPU
     %TODO weights(and others)
     
@@ -59,18 +71,20 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     end
     
     switch sampling
-        case 'uniform'
+        case validSampling(2)
             %uniform subsampling
             pc1 = datasample(pc1,samples,1,'Replace',false);
             pc2 = datasample(pc2,samples,1,'Replace',false);
             n = samples;
-        case 'random'
+        case validSampling(3)
             %random subsampling;
             %store original point clouds in pc1o
             pc1o = pc1;
             pc2o = pc2;
             n = samples;
-        case 'informative'
+            pc1 = pc1(1:n,:);
+            pc2 = pc2(1:n,:);
+        case validSampling(4)
         otherwise
             %all points, select subset of points that allow pc1 and pc2 
             %sizes to match
@@ -115,6 +129,10 @@ function [R,t] = ICP2(pc1,pc2,varargin)
             fprintf(fileID,'%f,%f,0.0\n',MSE,RMS);
         end
     end
+    if strcmp(method,'knn')
+        tree = KDTree(pc2);
+        %tree= kd_buildtree(pc2,0);
+    end
     %TODO implement oscillation rejection
     %% Main forloop
     P = pc1;
@@ -150,9 +168,14 @@ function [R,t] = ICP2(pc1,pc2,varargin)
                 Q(i,:) = pc2(ind,:);
             end
         elseif strcmp(method,'knn')
-            parfor i=1:n
-                [~,vec_vals,~] = kd_closestpointgood(tree,P(i,:));
-                Q(i,:) = vec_vals;
+%             parfor i=1:n
+%                 [~,vec_vals,~] = kd_closestpointgood(tree,P(i,:));
+%                 Q(i,:) = vec_vals;
+%             end
+            for i=1:n
+                ind = tree.nn(P(i,:));
+                
+                Q(i,:) = pc2(ind,:);
             end
         end
                 
