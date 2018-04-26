@@ -1,12 +1,34 @@
-function res =  merge2()
+function [res3] =  merge2()
+%     skip = 1;
+%     sampling = 'uniform';
+%     samples = 5000;
+%     iterations = 30;
+%     rms = 0.00001;
+%     verbose = 1;
+%     method = 'bruteforce';
+%     res = merge_all31(skip, sampling, samples, iterations,rms,verbose,method);
+%     save('ours_default1.mat','res');
+    
+%     skip = 2;
+%     sampling = 'uniform';
+%     samples = 5000;
+%     iterations = 30;
+%     rms = 0.00001;
+%     verbose = 1;
+%     method = 'bruteforce';
+%     res2 = merge_all31(skip, sampling, samples, iterations,rms,verbose,method);
+%     save('ours_default2.mat','res2');
+    
     skip = 1;
     sampling = 'uniform';
-    samples = 2000;
-    iterations = 30;
-    rms = 0.0001;
-    verbose = 1;
+    samples = 5000;
+    iterations = 20;
+    rms = 0.00001;
+    verbose = 2;
     method = 'knn';
-    res = merge_all31(skip, sampling, samples, iterations,rms,verbose,method);
+    res3 = merge_all32(skip, sampling, samples, iterations,rms,verbose,method);
+    save('ours_default3.mat','res');
+    
 end
 
 function gridsearch()
@@ -72,9 +94,8 @@ function res = merge_all31(n, sampling, samples, iterations,rms,verbose,method)
     for i = n:n:99
         base = get_pointcloud(i-n);
         target = get_pointcloud(i);
-        [R,t] = ICP2(base,target);
-%         [R,t] = ICP2(base,target,'sampling',sampling,'samples',samples,'max_iter',...
-%             iterations,'rms',rms,'verbose',verbose,'method',method);
+        [R,t] = ICP2(base,target,'sampling',sampling,'samples',samples,'max_iter',...
+            iterations,'rms',rms,'verbose',verbose,'method',method);
 %        EE( i/n,:) = E';
         for j=1:size(merged,1)
             merged(j,:) = (R*merged(j,1:3)' + t )';
@@ -84,13 +105,14 @@ function res = merge_all31(n, sampling, samples, iterations,rms,verbose,method)
     res = merged;
 end
 
-function res = merge_all32(n, sampling, samples, iterations,rms,verbose)
+function res = merge_all32(n, sampling, samples, iterations,rms,verbose,method)
     p = get_pointcloud(0);
 %     EE = zeros(floor(100/n), iterations + 1);
     
     for i = n:n:99
         q = get_pointcloud(i);
-        [R,t] = ICP2(base,target,samples,sampling,iterations,rms,verbose);
+        [R,t] = ICP2(p,q,'sampling',sampling,'samples',samples,'max_iter',...
+            iterations,'rms',rms,'verbose',verbose,'method',method);
 %        EE( i/n,:) = E';
         for j=1:size(p,1)
             p(j,:) = (R*p(j,1:3)' + t )';
@@ -108,7 +130,8 @@ function res = merge_all32_improved(n, sampling, samples, iterations,distance,rm
 
     for i = n:n:99
         q = get_pointcloud(i);
-        [R,t] = ICP2(base,target,samples,sampling,iterations,rms,verbose);
+        [R,t] = ICP2(p,q,'sampling',sampling,'samples',samples,'max_iter',...
+            iterations,'rms',rms,'verbose',verbose,'method',method);
 %        EE( i/n,:) = E';
         for j=1:size(p,1)
             p(j,:) = (R*p(j,1:3)' + t )';
