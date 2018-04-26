@@ -1,12 +1,24 @@
-function res =  merge2()
+function [res,res2] =  merge2()
     skip = 1;
     sampling = 'uniform';
-    samples = 2000;
+    samples = 5000;
     iterations = 30;
-    rms = 0.0001;
+    rms = 0.00001;
     verbose = 1;
-    method = 'knn';
+    method = 'bruteforce';
     res = merge_all31(skip, sampling, samples, iterations,rms,verbose,method);
+    save('ours_default1.mat','res');
+    
+    skip = 2;
+    sampling = 'uniform';
+    samples = 5000;
+    iterations = 30;
+    rms = 0.00001;
+    verbose = 1;
+    method = 'bruteforce';
+    res2 = merge_all31(skip, sampling, samples, iterations,rms,verbose,method);
+    save('ours_default2.mat','res2');
+    
 end
 
 function gridsearch()
@@ -72,9 +84,8 @@ function res = merge_all31(n, sampling, samples, iterations,rms,verbose,method)
     for i = n:n:99
         base = get_pointcloud(i-n);
         target = get_pointcloud(i);
-        [R,t] = ICP2(base,target);
-%         [R,t] = ICP2(base,target,'sampling',sampling,'samples',samples,'max_iter',...
-%             iterations,'rms',rms,'verbose',verbose,'method',method);
+        [R,t] = ICP2(base,target,'sampling',sampling,'samples',samples,'max_iter',...
+            iterations,'rms',rms,'verbose',verbose,'method',method);
 %        EE( i/n,:) = E';
         for j=1:size(merged,1)
             merged(j,:) = (R*merged(j,1:3)' + t )';
