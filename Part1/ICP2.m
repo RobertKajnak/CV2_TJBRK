@@ -2,6 +2,10 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 % IPC2  Calculate the rotation and translation matrices using IPC
 %   PC1 origin point cloud of form [n,d], n=number of points, d=dimension
 %   PC2 target point cloud of form [m,d]. if m~=n min(n,m) will be considered 
+%   VARARGIN -- Following arguments are optional:
+%   'nc1','nc2'- array of normals. Should be same size as pointcloud, with each
+%                index corresponding to the same indexed point in pc1 and
+%                pc2
 %   'samples'  - amount of samples used to calculate matrices. Default = 2000
 %   'sampling' - 'all' = all points; SAMPLES will be ignored. If sizes do not
 %                       match, the first n=min(samples_pc1,samples_pc2) will be
@@ -47,6 +51,8 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     p.addParameter('method','knn',@(x)any(validatestring(x,possibleMethods)));
     p.addParameter('R',eye(3));
     p.addParameter('t',zeros(3,1));
+    p.addParameter('nc1',nan);
+    p.addParameter('nc2',nan); 
     
     p.parse(varargin{:});
     r = p.Results;
@@ -58,6 +64,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     method = validatestring(r.method,possibleMethods);
     R= r.R;
     t= r.t;
+    nc1=r.nc1;
+    nc2=r.nc2;
+    isNormalsRequested = strcmp('informative',sampling);
     if verbose
         onoff=["off","on"];
         fprintf(['Starting search with hyperparameters\nsamples=%d; sampling=%s; '...
@@ -68,34 +77,115 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     %TODO GPU
     %TODO weights(and others)
     
+    %% Point cloud validation
     %max number of elements; safeguards against different lengths
     n = min(size(pc1,1),size(pc2,1));
+        %check if the input clours are of the same dimensionality
+    if size(pc1,2) ~= size(pc2,2)
+        error('The two points clouds should have same dimensionality; %d~=%d'...
+            ,size(pc1,2),size(pc2,2))
+    else
+        d = size(pc1,2);
+    end
     
     if samples>n
         samples = n;
     end
+    n = samples;
     
+    %Check for NaNs
+    if (any(any(isnan(nc1)))~=all(all(isnan(nc1)))) ||  ...
+        (any(any(isnan(nc2)))~=all(all(isnan(nc2))))
+        warning('NaN values in normal clouds not might give less-than optimal results');
+        nc1(isnan(nc1))=0;
+        nc2(isnan(nc2))=0;
+    end
+    %Check if sizes match
+    isNormalsProvided = all(all(~isnan(nc1))) && all(all(~isnan(nc2)));
+    if isNormalsProvided
+        if (size(pc1,1)~= size(nc1,1))
+            error(['The number of points in the pointcloud 1 do not match the'...,
+                'number of points in normal cloud: %d=/=%d'],size(pc1,1),size(nc1,1));
+        end
+        if (size(pc2,1) ~= size(nc2,1))
+            error(['The number of points in the pointcloud 2 do not match the'...,
+                'number of points in normal cloud: %d=/=%d'],size(pc2,1),size(nc2,1));
+        end
+    end
+    %Since I hate when a matlab library gives an error 5 levels deep inside
+    %the file dependenceies, instead of giving at least a warning upfornt,
+    %I will try to do better
+    if ~isNormalsRequested && isNormalsProvided
+        warning(['You have provided normals but have not requested a '...
+            'sampling method that makes use of it e.g. "informative"'])
+    end
+    %% Resize pointclouds
+    %n and d verified/computed at this point
+    
+
     switch sampling
         case validSampling(2)
             %uniform subsampling
-            pc1 = datasample(pc1,samples,1,'Replace',false);
-            pc2 = datasample(pc2,samples,1,'Replace',false);
-            n = samples;
+            [pc1,~] = datasample(pc1,n,1,'Replace',false);
+            [pc2,~] = datasample(pc2,n,1,'Replace',false);
+            
+
+%             if isNormalsRequested
+%                 nc1 = nc1(idx1);
+%                 nc2 = nc2(idx2);
+%             end
         case validSampling(3)
             %random subsampling;
             %store original point clouds in pc1o
             pc1o = pc1;
             pc2o = pc2;
-            n = samples;
             pc1 = pc1(1:n,:);
             pc2 = pc2(1:n,:);
+            
+%             if isNormalsRequested
+%                 nc1o = nc1;
+%                 nc2o = nc2;
+%                 nc1 = nc1(1:n,:);
+%                 nc2 = nc2(1:n,:);
+%             end
         case validSampling(4)
-        otherwise
-            %all points, select subset of points that allow pc1 and pc2 
-            %sizes to match
+            %informative
+            if isNormalsRequested && ~isNormalsProvided
+                %TODO Implement normal calcuation for pointcloud
+                nc1=[]
+                nc2=[] 
+            end
+            [nc1x,idx1] = sort(nc1(:,1));
+            [nc1y,idy1] = sort(nc1(:,2));
+            [nc1z,idz1] = sort(nc1(:,3));
+            [nc2x,idx2] = sort(nc2(:,1));
+            [nc2y,idy2] = sort(nc2(:,2));
+            [nc2z,idz2] = sort(nc2(:,3));
+            pc1o = pc1;
+            l1=size(pc1,1);
+            pc2o = pc2;
+            l2=size(pc2,1);
+            %using pc1 instead of pc1o would yield the same result, but
+            %this is more readable
+            
+            rat1 = floor(3*l1/n);
+            rat2 = floor(3*l2/n);
+            pc1 = [pc1o(idx1(1:rat1:l1),:);pc1o(idy1(1:rat1:l1),:);pc1o(idz1(1:rat1:l1),:)];
+            pc2 = [pc2o(idx2(1:rat2:l2),:);pc2o(idy2(1:rat2:l2),:);pc2o(idz2(1:rat2:l2),:)];
             n = min(size(pc1,1),size(pc2,1));
             pc1 = pc1(1:n,:);
             pc2 = pc2(1:n,:);
+        otherwise
+            %'as is'
+            %all points, the lower number of points in n has been dealt in
+            %the previous section
+
+            pc1 = pc1(1:n,:);
+            pc2 = pc2(1:n,:);
+%             if isNormalsReqested
+%                 nc1 = nc1(1:n,:);
+%                 nc2 = nc2(1:n,:);
+%             end
     end
     if sampling ~= 2
         %Because of the inner for-loop, each worker would create it's
@@ -104,20 +194,14 @@ function [R,t] = ICP2(pc1,pc2,varargin)
         %pc2pt = parallel.pool.Constant(pc2');
     end
     
-    if n>20000
+    if n>20000 && ~strcmp(method,'knn')
         warning('The use of more than than 20000 points requested. More than 200s/iteration may be necessary');
     end
-    
-    %check if the input clours are of the same dimensionality
-    if size(pc1,2) ~= size(pc2,2)
-        error('The two points clouds should have same dimensionality; %d~=%d'...
-            ,size(pc1,2),size(pc2,2))
-    else
-        d = size(pc1,2);
-    end
-    
+   
+    %% Initialize variables for for loop
     RMSold = inf;
     diffSum = 0;
+    n
     for i=1:n
         diffSum =diffSum + norm( pc1(i,:)' - pc2(i,:)'  )^2;
     end
@@ -145,9 +229,12 @@ function [R,t] = ICP2(pc1,pc2,varargin)
         k=k+1;
         tic 
         
-        if sampling==2
-            pc1 = datasample(pc1o,samples,1,'Replace',false);
-            pc2 = datasample(pc2o,samples,1,'Replace',false);
+        if strcmp(sampling,'random')
+            pc1 = datasample(pc1o,n,1,'Replace',false);
+            pc2 = datasample(pc2o,n,1,'Replace',false);
+            for i=1:n
+                P(i,:) = (R*pc1(i,:)' + t)';
+            end
             %pc2p = parallel.pool.Constant(pc2);
             if strcmp(method,'knn')
                 tree = KDTree(pc2);
