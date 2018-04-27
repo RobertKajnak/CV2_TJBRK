@@ -51,14 +51,19 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     p.parse(varargin{:});
     r = p.Results;
     samples = r.samples;
-    sampling = r.sampling;
+    sampling = validatestring(r.sampling,validSampling);
     max_iter = r.max_iter;
     rms = r.rms;
     verbose =r.verbose;
-    method = r.method;
+    method = validatestring(r.method,possibleMethods);
     R= r.R;
     t= r.t;
-    
+    if verbose
+        onoff=["off","on"];
+        fprintf(['Starting search with hyperparameters\nsamples=%d; sampling=%s; '...
+            'maximum iterations=%d; rms=%f; method=%s; logging=%s\n'],...
+            samples,sampling,max_iter,rms,method,onoff(int8(verbose==2)+1));
+    end
     %% Initialize variables
     %TODO GPU
     %TODO weights(and others)
@@ -144,6 +149,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
             pc1 = datasample(pc1o,samples,1,'Replace',false);
             pc2 = datasample(pc2o,samples,1,'Replace',false);
             %pc2p = parallel.pool.Constant(pc2);
+            if strcmp(method,'knn')
+                tree = KDTree(pc2);
+            end
         end
         
         RMSold = RMS;
