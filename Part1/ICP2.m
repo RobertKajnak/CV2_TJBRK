@@ -154,24 +154,21 @@ function [R,t] = ICP2(pc1,pc2,varargin)
                 %TODO Implement normal calcuation for pointcloud
                 nc1=[]
                 nc2=[] 
+            else
+                %remove non-informative 0 values
             end
-            [nc1x,idx1] = sort(nc1(:,1));
-            [nc1y,idy1] = sort(nc1(:,2));
-            [nc1z,idz1] = sort(nc1(:,3));
-            [nc2x,idx2] = sort(nc2(:,1));
-            [nc2y,idy2] = sort(nc2(:,2));
-            [nc2z,idz2] = sort(nc2(:,3));
-            pc1o = pc1;
-            l1=size(pc1,1);
-            pc2o = pc2;
-            l2=size(pc2,1);
-            %using pc1 instead of pc1o would yield the same result, but
-            %this is more readable
-            
-            rat1 = floor(3*l1/n);
-            rat2 = floor(3*l2/n);
-            pc1 = [pc1o(idx1(1:rat1:l1),:);pc1o(idy1(1:rat1:l1),:);pc1o(idz1(1:rat1:l1),:)];
-            pc2 = [pc2o(idx2(1:rat2:l2),:);pc2o(idy2(1:rat2:l2),:);pc2o(idz2(1:rat2:l2),:)];
+            pc1o=pc1;
+            pc1=cell(1,3);
+            pc2o=pc2;
+            pc2=cell(1,3);
+            for i=1:3
+                ind1 = getUsefulIndicesSorted(nc1(:,i),n);
+                pc1{i} = pc1o(ind1,:);
+                ind2 = getUsefulIndicesSorted(nc2(:,i),n);
+                pc2{i} = pc2o(ind2,:);
+            end
+            pc1 = [pc1{1};pc1{2};pc1{3}];
+            pc2 = [pc2{1};pc2{2};pc2{3}];
             n = min(size(pc1,1),size(pc2,1));
             pc1 = pc1(1:n,:);
             pc2 = pc2(1:n,:);
@@ -320,3 +317,12 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     
 end
 
+function [ind] = getUsefulIndicesSorted(val,nrpoints)
+    [val,ind] = sort(val);
+    from = find(val==0,1,'first');
+    to = find(val==0,1,'last');
+    ind = [ind(1:from); ind(to:end)];
+    len = size(ind,1);
+    rat = ceil(3*len/nrpoints);
+    ind = ind(1:rat:len);
+end
