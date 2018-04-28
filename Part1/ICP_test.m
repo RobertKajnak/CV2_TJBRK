@@ -2,7 +2,14 @@
 % pp = parpool(8)
 % addpath('ataiya-kdtree-req');
 % run('ataiya-kdtree-req/kdtree_compile.m')
-type = 2;
+
+% Demo Types:
+% 0 - sine
+% 1 - sine with noise
+% 2 - real dataset
+% 3 - real dataset with recorded normals, sampling overwriteen
+% 4 - real dataset with calculated normals, sampling overwriteen
+type = 4;
 gpu=0;
 
 samples = 2000;
@@ -10,7 +17,7 @@ iter = 150;
 rms = 0.00001;
 verb = 1;
 %this is overwriten in type==3
-sampling = 'all';
+sampling = 'uni';
 
 switch type
     case 0
@@ -24,7 +31,7 @@ switch type
         pc1=awgn(A1.source',20,'measured');
         A2=load('data/target.mat');
         pc2=awgn(A2.target',20,'measured');
-    case 2 
+    otherwise
         pc1 = readPcd('Data/data/0000000001.pcd');
         pc2 = readPcd('Data/data/0000000005.pcd');
         %omit points further away than 2m
@@ -33,16 +40,8 @@ switch type
         %dismiss 4th dimension
         pc1 = pc1(:,1:3);
         pc2 = pc2(:,1:3);
-    case 3
-        pc1 = readPcd('Data/data/0000000001.pcd');
-        pc2 = readPcd('Data/data/0000000005.pcd');
-        %omit points further away than 2m
-        pc1 = pc1(pc1(:,3)<2,:);
-        pc2 = pc2(pc2(:,3)<2,:);
-        %dismiss 4th dimension
-        pc1 = pc1(:,1:3);
-        pc2 = pc2(:,1:3);
-        
+end
+if type==3 
         sampling = 'inf';
         nc1 = readPcd('Data/data/0000000001_normal.pcd');
         nc2 = readPcd('Data/data/0000000005_normal.pcd');
@@ -54,6 +53,11 @@ switch type
         
         [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
                 'rms',0.00001,'verbose',verb,'method','knn','nc1',nc1,'nc2',nc2);
+end 
+if type == 4 
+        sampling = 'inf';
+        [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
+                'rms',0.00001,'verbose',verb,'method','knn');
 end
 %TODO implement GPU parallelization
 if gpu
@@ -61,7 +65,7 @@ if gpu
     pc2 = gpuArray(pc2);
 end
 
-if type~=3
+if type<3 
     [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
                     'rms',0.00001,'verbose',verb,'method','knn');
 end

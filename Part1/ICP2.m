@@ -153,20 +153,19 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 %             end
         case validSampling(4)
             %informative
-%             if isNormalsRequested %&& ~isNormalsProvided
-%                 %TODO Implement normal calcuation for pointcloud
-%                 nc1=[];
-%                 nc2=[];
-%                 for i=1:n
-%                     if ~all(nc1(i,:)==0)
-%                         nc1(i,:)
-%                         pc1(i,:)
-%                         calculateNormal(pc1(i,:))
-%                     end
-%                 end
-%             else
-%                 %remove non-informative 0 values
-%             end
+            if isNormalsRequested && ~isNormalsProvided
+                %TODO Implement normal calcuation for pointcloud
+                nc1=zeros(size(pc1));
+                nc2=zeros(size(pc2));
+                tree1 = KDTree(pc1);
+                tree2 = KDTree(pc2);
+                for i=1:n
+                    ind = tree1.knn(pc1(i,:),3);
+                    nc1(i,:) = calculateNormal(pc1(ind,:));
+                    ind = tree2.knn(pc2(i,:),3);
+                    nc2(i,:) = calculateNormal(pc2(ind,:));
+                end
+            end
 
             pc1o=pc1;
             pc1=cell(1,3);
@@ -175,7 +174,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
             for i=1:3
                 ind1 = getUsefulIndicesSorted(nc1(:,i),floor(n/3));
                 pc1{i} = pc1o(ind1,:);
-                ind2 = getUsefulIndicesSorted(nc2(:,i),floor(n));
+                ind2 = getUsefulIndicesSorted(nc2(:,i),floor(n/3));
                 pc2{i} = pc2o(ind2,:);
             end
             pc1 = [pc1{1};pc1{2};pc1{3}];
@@ -348,14 +347,21 @@ function [ind] = getUsefulIndicesSorted(val,nrpoints)
 %     ind = ind(1:rat:len);
 end
 
-function [F] = calculateNormal(point)
-    DT = delaunayTriangulation(point);
+function [normal] = calculateNormal(points)
+    %DT = delaunayTriangulation(points);
     %Find the free boundary facets of the triangulation, and use them to create a 2-D triangulation on the surface.
-
-    [T,Xb] = freeBoundary(DT);
-    TR = triangulation(T,Xb);
-    %Compute the centers and face normals of each triangle facet in TR.
-
-    F = faceNormal(TR);  
+    P0 = points(1,:);
+    P1 = points(2,:);
+    P2 = points(3,:);
+    normal = cross(P0-P1, P0-P2); 
+    normal = normal/sum(normal);
+    if any(isnan(normal))
+        normal=[0,0,0];
+    end
+%     [T,Xb] = freeBoundary(DT);
+%     TR = triangulation(T,Xb);
+%     %Compute the centers and face normals of each triangle facet in TR.
+% 
+%     F = faceNormal(DT);  
 
 end
