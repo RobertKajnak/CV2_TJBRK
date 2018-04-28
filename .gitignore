@@ -1,3 +1,8 @@
 *.asv
 *.pdf
+*.csv
+*.mex
+*.mexw64
+
 Part1/Data/
+Part1/results
