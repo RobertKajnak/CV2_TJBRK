@@ -153,21 +153,29 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 %             end
         case validSampling(4)
             %informative
-            if isNormalsRequested && ~isNormalsProvided
-                %TODO Implement normal calcuation for pointcloud
-                nc1=[]
-                nc2=[] 
-            else
-                %remove non-informative 0 values
-            end
+%             if isNormalsRequested %&& ~isNormalsProvided
+%                 %TODO Implement normal calcuation for pointcloud
+%                 nc1=[];
+%                 nc2=[];
+%                 for i=1:n
+%                     if ~all(nc1(i,:)==0)
+%                         nc1(i,:)
+%                         pc1(i,:)
+%                         calculateNormal(pc1(i,:))
+%                     end
+%                 end
+%             else
+%                 %remove non-informative 0 values
+%             end
+
             pc1o=pc1;
             pc1=cell(1,3);
             pc2o=pc2;
             pc2=cell(1,3);
             for i=1:3
-                ind1 = getUsefulIndicesSorted(nc1(:,i),n);
+                ind1 = getUsefulIndicesSorted(nc1(:,i),floor(n/3));
                 pc1{i} = pc1o(ind1,:);
-                ind2 = getUsefulIndicesSorted(nc2(:,i),n);
+                ind2 = getUsefulIndicesSorted(nc2(:,i),floor(n));
                 pc2{i} = pc2o(ind2,:);
             end
             pc1 = [pc1{1};pc1{2};pc1{3}];
@@ -201,7 +209,6 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     %% Initialize variables for for loop
     RMSold = inf;
     diffSum = 0;
-    n
     for i=1:n
         diffSum =diffSum + norm( pc1(i,:)' - pc2(i,:)'  )^2;
     end
@@ -325,7 +332,30 @@ function [ind] = getUsefulIndicesSorted(val,nrpoints)
     from = find(val==0,1,'first');
     to = find(val==0,1,'last');
     ind = [ind(1:from); ind(to:end)];
+    val = [val(1:from); val(to:end)];
     len = size(ind,1);
-    rat = ceil(3*len/nrpoints);
-    ind = ind(1:rat:len);
+    
+    spread = val(1):(val(end)-val(1))/nrpoints:val(end);
+    ind2 = zeros(nrpoints,1);
+    val2 = zeros(nrpoints,1);
+    for i=1:nrpoints
+        p=find(val>=spread(i),1,'first');
+        ind2(i) = ind(p);
+        val2(i) = val(p);
+    end
+    ind = ind2;
+%     rat = ceil(3*len/nrpoints);
+%     ind = ind(1:rat:len);
+end
+
+function [F] = calculateNormal(point)
+    DT = delaunayTriangulation(point);
+    %Find the free boundary facets of the triangulation, and use them to create a 2-D triangulation on the surface.
+
+    [T,Xb] = freeBoundary(DT);
+    TR = triangulation(T,Xb);
+    %Compute the centers and face normals of each triangle facet in TR.
+
+    F = faceNormal(TR);  
+
 end
