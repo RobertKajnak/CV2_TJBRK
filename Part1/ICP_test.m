@@ -5,6 +5,13 @@
 type = 2;
 gpu=0;
 
+samples = 2000;
+iter = 150;
+rms = 0.00001;
+verb = 1;
+%this is overwriten in type==3
+sampling = 'all';
+
 switch type
     case 0
         A1=load('data/source.mat');
@@ -26,8 +33,17 @@ switch type
         %dismiss 4th dimension
         pc1 = pc1(:,1:3);
         pc2 = pc2(:,1:3);
+    case 3
+        pc1 = readPcd('Data/data/0000000001.pcd');
+        pc2 = readPcd('Data/data/0000000005.pcd');
+        %omit points further away than 2m
+        pc1 = pc1(pc1(:,3)<2,:);
+        pc2 = pc2(pc2(:,3)<2,:);
+        %dismiss 4th dimension
+        pc1 = pc1(:,1:3);
+        pc2 = pc2(:,1:3);
         
-        
+        sampling = 'inf';
         nc1 = readPcd('Data/data/0000000001_normal.pcd');
         nc2 = readPcd('Data/data/0000000005_normal.pcd');
         nc1 = nc1(pc1(:,3)<2,:);
@@ -35,16 +51,20 @@ switch type
         %dismiss 4th dimension
         nc1 = nc1(:,1:3);
         nc2 = nc2(:,1:3);
+        
+        [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
+                'rms',0.00001,'verbose',verb,'method','knn','nc1',nc1,'nc2',nc2);
 end
 %TODO implement GPU parallelization
 if gpu
     pc1 = gpuArray(pc1);
     pc2 = gpuArray(pc2);
 end
-%[R,t]  = ICP2(pc1,pc2,samples,sampling,max_repeats,rms)
-[R,t] = ICP2(pc1,pc2,'samples',2000,'sampling','uniform','max_iter',150, ...
-                'rms',0.00001,'verbose',1,'method','knn','nc1',nc1,'nc2',nc2);
 
+if type~=3
+    [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
+                    'rms',0.00001,'verbose',verb,'method','knn');
+end
 %blue
 blue = zeros(size(pc1,1),1);
 blue(:,:) = 0.6;
