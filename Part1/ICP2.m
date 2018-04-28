@@ -67,6 +67,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     nc1=r.nc1;
     nc2=r.nc2;
     isNormalsRequested = strcmp('informative',sampling);
+    if strcmp(sampling,'all')
+        samples = min(size(pc1,1),size(pc2,1));
+    end
     if verbose
         onoff=["off","on"];
         fprintf(['Starting search with hyperparameters\nsamples=%d; sampling=%s; '...
