@@ -1,3 +1,5 @@
+All necesary files to run the code are included within the archive (though some files need to be compiled).
+
 The code requires the code for the knn search algortihm, which can be found in ataiya-kdtree-req folder, downloaded from: https://nl.mathworks.com/matlabcentral/fileexchange/21512-ataiya-kdtree (Note that not all files from the original download are included, only the ones used in the project)
 
 It needs to be compiled however, which requires a CPP compiler configured (and 'mex').
