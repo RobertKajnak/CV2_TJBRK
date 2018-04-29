@@ -29,14 +29,14 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 %   'R' & 't'- To continue where a previous search left off or from
 %                custom initial transformation. 
 %                Default: R=eye(3); t=zeros(1,3)
+%   'plot'     - 0     => off
+%                else  => plot MSE by iterations
 %
 %   See also MERGE
 %
 %   K-D tree implementation by Andrea Tagliasacchi, downloaded from 
 %   https://nl.mathworks.com/matlabcentral/fileexchange/21512-ataiya-kdtree
     
-    %TODO - update doc. Also, since now the number of paramters is not an
-    %issue, maybe add paralellization as one ('none','CPU','GPU')
     %% resolve default argumnets and check inputs
     p = inputParser;
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
@@ -53,6 +53,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     p.addParameter('t',zeros(3,1));
     p.addParameter('nc1',nan);
     p.addParameter('nc2',nan); 
+    p.addParameter('plot',0);
     
     p.parse(varargin{:});
     r = p.Results;
@@ -66,6 +67,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     t= r.t;
     nc1=r.nc1;
     nc2=r.nc2;
+    isPlot = r.plot;
     isNormalsRequested = strcmp('informative',sampling);
     if strcmp(sampling,'all')
         samples = min(size(pc1,1),size(pc2,1));
@@ -154,7 +156,6 @@ function [R,t] = ICP2(pc1,pc2,varargin)
         case validSampling(4)
             %informative
             if isNormalsRequested && ~isNormalsProvided
-                %TODO Implement normal calcuation for pointcloud
                 nc1=zeros(size(pc1));
                 nc2=zeros(size(pc2));
                 tree1 = KDTree(pc1);
@@ -223,6 +224,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
             fprintf(fileID,'MSE,RMS,time_sec\n');
             fprintf(fileID,'%f,%f,0.0\n',MSE,RMS);
         end
+    end
+    if isPlot
+        rmsHist=RMS;
     end
     if strcmp(method,'knn')
         tree = KDTree(pc2);
@@ -313,6 +317,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
                 fprintf(fileID,'%f,%f,%f\n',MSE,RMS,time);
             end
         end
+        if isPlot
+            rmsHist(end+1)=RMS;
+        end
     end
     
     %Add new line in console and close file
@@ -323,7 +330,9 @@ function [R,t] = ICP2(pc1,pc2,varargin)
             fclose(fileID);
         end
     end
-    
+    if isPlot
+        plot(1:k,rmsHist(2:end));
+    end
 end
 
 function [ind] = getUsefulIndicesSorted(val,nrpoints)

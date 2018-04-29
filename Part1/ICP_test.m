@@ -9,15 +9,16 @@
 % 2 - real dataset
 % 3 - real dataset with recorded normals, sampling overwriteen
 % 4 - real dataset with calculated normals, sampling overwriteen
-type = 4;
+type = 3;
 gpu=0;
 
-samples = 2000;
-iter = 150;
+samples = 10000;
+iter = 20;
 rms = 0.00001;
 verb = 1;
 %this is overwriten in type==3
 sampling = 'uni';
+isPlot = 1;
 
 switch type
     case 0
@@ -33,7 +34,7 @@ switch type
         pc2=awgn(A2.target',20,'measured');
     otherwise
         pc1 = readPcd('Data/data/0000000001.pcd');
-        pc2 = readPcd('Data/data/0000000005.pcd');
+        pc2 = readPcd('Data/data/0000000003.pcd');
         %omit points further away than 2m
         pc1 = pc1(pc1(:,3)<2,:);
         pc2 = pc2(pc2(:,3)<2,:);
@@ -52,12 +53,12 @@ if type==3
         nc2 = nc2(:,1:3);
         
         [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                'rms',0.00001,'verbose',verb,'method','knn','nc1',nc1,'nc2',nc2);
+                'rms',rms,'verbose',verb,'method','knn','nc1',nc1,'nc2',nc2,'plot',isPlot);
 end 
 if type == 4 
         sampling = 'inf';
         [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                'rms',0.00001,'verbose',verb,'method','knn');
+                'rms',rms,'verbose',verb,'method','knn','plot',isPlot);
 end
 %TODO implement GPU parallelization
 if gpu
@@ -67,8 +68,9 @@ end
 
 if type<3 
     [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                    'rms',0.00001,'verbose',verb,'method','knn');
+                    'rms',rms,'verbose',verb,'method','knn','plot',isPlot);
 end
+return
 %blue
 blue = zeros(size(pc1,1),1);
 blue(:,:) = 0.6;
@@ -105,4 +107,13 @@ fscatter3(pc2(:,1),pc2(:,2),pc2(:,3),green);
 %legend({'transformed','target','original'});
 legend({'transformed','target'});
 
-
+return
+legend({'all points','uniform','random','provided normals','calculated normals'})
+xlabel('Iterations');
+ylabel('RMS');
+hline = findobj(gcf, 'type', 'line')
+set(hline(1),'Marker','o')
+set(hline(2),'Marker','*')
+set(hline(3),'Marker','diamond')
+set(hline(4),'Marker','square')
+set(hline(5),'Marker','+')
