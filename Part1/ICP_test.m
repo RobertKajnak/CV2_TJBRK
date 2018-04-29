@@ -9,16 +9,17 @@
 % 2 - real dataset
 % 3 - real dataset with recorded normals, sampling overwriteen
 % 4 - real dataset with calculated normals, sampling overwriteen
-type = 3;
+type =2;
 gpu=0;
 
 samples = 10000;
-iter = 20;
+iter = 50;
 rms = 0.00001;
 verb = 1;
 %this is overwriten in type==3
-sampling = 'uni';
-isPlot = 1;
+sampling = 'un';
+method = 'reduced-knn';
+isPlot = 0;
 
 switch type
     case 0
@@ -53,12 +54,12 @@ if type==3
         nc2 = nc2(:,1:3);
         
         [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                'rms',rms,'verbose',verb,'method','knn','nc1',nc1,'nc2',nc2,'plot',isPlot);
+                'rms',rms,'verbose',verb,'method',method,'nc1',nc1,'nc2',nc2,'plot',isPlot);
 end 
 if type == 4 
         sampling = 'inf';
         [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                'rms',rms,'verbose',verb,'method','knn','plot',isPlot);
+                'rms',rms,'verbose',verb,'method',method,'plot',isPlot);
 end
 %TODO implement GPU parallelization
 if gpu
@@ -68,9 +69,9 @@ end
 
 if type<3 
     [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                    'rms',rms,'verbose',verb,'method','knn','plot',isPlot);
+                    'rms',rms,'verbose',verb,'method',method,'plot',isPlot,'red',0.6);
 end
-return
+%return
 %blue
 blue = zeros(size(pc1,1),1);
 blue(:,:) = 0.6;

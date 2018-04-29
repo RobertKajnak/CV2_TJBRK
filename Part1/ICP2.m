@@ -41,7 +41,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     p = inputParser;
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
     %TODO these do noth throw errors when they are supposed to
-    possibleMethods = {'asis','bruteforce','knn'};
+    possibleMethods = {'asis','bruteforce','knn','reduced-knn'};
     validSampling = {'all','uniform','random','informative'};
     p.addParameter('samples',2000,validScalarPosNum);
     p.addParameter('sampling','uniform',@(x)any(validatestring(x,validSampling)));
@@ -54,7 +54,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     p.addParameter('nc1',nan);
     p.addParameter('nc2',nan); 
     p.addParameter('plot',0);
-    
+    p.addParameter('reduction_ratio',0.6);
     p.parse(varargin{:});
     r = p.Results;
     samples = r.samples;
@@ -68,6 +68,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
     nc1=r.nc1;
     nc2=r.nc2;
     isPlot = r.plot;
+    red_rat = r.reduction_ratio;
     isNormalsRequested = strcmp('informative',sampling);
     if strcmp(sampling,'all')
         samples = min(size(pc1,1),size(pc2,1));
@@ -232,7 +233,16 @@ function [R,t] = ICP2(pc1,pc2,varargin)
         tree = KDTree(pc2);
         %tree= kd_buildtree(pc2,0);
     end
-    %TODO implement oscillation rejection
+    if strcmp(method,'reduced-knn') 
+        n=floor(n*red_rat);
+        tree = KDTree(pc1);
+        pc1 = pc1(tree.knn(mean(pc1),n),:);
+        tree = KDTree(pc2);
+        pc2 = pc2(tree.knn(mean(pc2),n),:);
+        tree = KDTree(pc2);
+        
+    end
+
     %% Main forloop
     P = pc1;
     while abs(RMSold-RMS)>rms && k<max_iter
@@ -272,11 +282,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
                 end
                 Q(i,:) = pc2(ind,:);
             end
-        elseif strcmp(method,'knn')
-%             parfor i=1:n
-%                 [~,vec_vals,~] = kd_closestpointgood(tree,P(i,:));
-%                 Q(i,:) = vec_vals;
-%             end
+        elseif strcmp(method,'knn') || strcmp(method,'reduced-knn')
             for i=1:n
                 ind = tree.nn(P(i,:));
                 
@@ -331,7 +337,7 @@ function [R,t] = ICP2(pc1,pc2,varargin)
         end
     end
     if isPlot
-        plot(1:k,rmsHist(2:end));
+        plot(0:k,rmsHist);
     end
 end
 
