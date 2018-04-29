@@ -21,6 +21,10 @@ function [R,t] = ICP2(pc1,pc2,varargin)
 %   'method'   - 'bruteforce' => O(n^2) iterative search for minimum
 %              - 'knn' => DEFAULT. O(n*log(n)) k-d tree based search. 
 %                  Compiled library necessary
+%              - 'reduced-knn' => keep only the RAT number of points from
+%                the center of all points. RAT is specified using the
+%                paramter 'reduction_ratio': 1 means all points kept, .6
+%                60%, from the center
 %              - 'asis' => The input point clouds are ordered and matching
 %                 point search is not necessary
 %   'verbose'  - 0=> no output.
