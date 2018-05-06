@@ -9,16 +9,16 @@
 % 2 - real dataset
 % 3 - real dataset with recorded normals, sampling overwriteen
 % 4 - real dataset with calculated normals, sampling overwriteen
-type =2;
+type =0;
 gpu=0;
 
-samples = 10000;
+samples = 2000;
 iter = 50;
 rms = 0.00001;
 verb = 1;
 %this is overwriten in type==3
-sampling = 'un';
-method = 'reduced-knn';
+sampling = 'inf';
+method = 'knn';
 isPlot = 0;
 
 switch type
@@ -69,7 +69,7 @@ end
 
 if type<3 
     [R,t] = ICP2(pc1,pc2,'samples',samples,'sampling',sampling,'max_iter',iter, ...
-                    'rms',rms,'verbose',verb,'method',method,'plot',isPlot,'red',0.6);
+                    'rms',rms,'verbose',verb,'method',method,'plot',isPlot);
 end
 %return
 %blue

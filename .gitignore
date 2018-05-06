@@ -3,6 +3,10 @@
 *.csv
 *.mex
 *.mexw64
+*.fig
+*.jpg
+*.png
 
 Part1/Data/
 Part1/results
+Part2/Results
