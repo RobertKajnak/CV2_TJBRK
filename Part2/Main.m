@@ -13,4 +13,4 @@ im2 = imread(im2name);
 
 %% Calculate Fundamental Matrix 
 
-A = FundamentalMatrix(im1, im2);
+A = FundamentalMatrix(im1, im2, 50, 1);
