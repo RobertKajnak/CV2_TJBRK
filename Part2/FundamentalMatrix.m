@@ -1,14 +1,7 @@
-addpath(genpath('./Assignment_4'))
-clear all; close all;
-%%
+function [A] = FundamentalMatrix(im1, im2)
+% Calculates the fundamental matrix A for the transformation between images
+% im1 and im2
 
-%TODO - eliminate points from background - how?
-path = 'data/House/';
-image = 'frame0000000%d.png';
-im1name = sprintf([path,image],1);
-im2name = sprintf([path,image],2);
-im1 = imread(im1name);
-im2 = imread(im2name);
 
 %% Get matches
 [scores, matches,f1,f2,~,~] = keypoint_matching(im1, im2);
