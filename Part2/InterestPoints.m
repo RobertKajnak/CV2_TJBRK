@@ -32,7 +32,7 @@ function [p,pi] = InterestPoints(im1, im2, n, show_matched_points)
     
     %% Plot matches - visual check
     if show_matched_points
-        figure('name','10 matching points from the two images');
+        figure('name',sprintf('%d matching points from the two images',n));
         imshow(cat(2, im1, im2));
 
         hold on;

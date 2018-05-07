@@ -1,4 +1,4 @@
-function [pi_hat] = normalizedPi(pi)
+function [pi_hat,T] = normalizedPi(pi)
 %NORMALIZEDPI Summary of this function goes here
 %   Detailed explanation goes here
     n= size(pi,1);
