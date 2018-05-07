@@ -47,16 +47,16 @@ function [p,pi] = InterestPoints(im1, im2, n, show_matched_points)
 
     %% Calculate matrix A
 
-    p = zeros(n,2);
-    pi = zeros(n,2);
+    p = zeros(n,3);
+    pi = zeros(n,3);
     
     for i = 1:n
         x1 = f1(1,best_inliers(1,i)) ;
         x2 = f2(1,best_inliers(2,i)) ;
         y1 = f1(2,best_inliers(1,i)) ;
         y2 = f2(2,best_inliers(2,i)) ;
-        p(i,:)=[x1 y1];
-        pi(i,:)=[x2 y2];
+        p(i,:)=[x1 y1 1];
+        pi(i,:)=[x2 y2 1];
     end
     
 end

@@ -15,7 +15,7 @@ im2 = imread(im2name);
 %Specify number of sample points;
 n = 50;
 
-[p,pi] = InterestPoints(im1, im2, n, 1);
+[p, pi] = InterestPoints(im1, im2, n, 1);
 
 %%  3.1 Eight Point Algorithm
 A = MakeA(p,pi);
@@ -38,14 +38,19 @@ Df(ind,ind)=0;
 
 F = Uf*Df*Vf';
 
-%% 3.2.1 Normalize 
-
-p = [p,ones(n,1)];
+%% 3.2.1 Normalize source points
 
 p_hat = normalizedPi(p);
 
-%% Normalize target points
-pi = [pi,ones(n,1)];
+%% 3.2.1 Normalize target points
 
 pi_hat = normalizedPi(pi);
+
+%% 3.2.2 Make A Matrix
+
+MakeA(p_hat,pi_hat);
+
+
+
+
 
