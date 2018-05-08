@@ -1,8 +1,11 @@
-function [p,pi] = InterestPoints(im1, im2, n, show_matched_points)
+function [p,pi,d1,d2] = InterestPoints(im1, im2, n, show_matched_points)
 % Calculates the fundamental matrix A(nx9) for the transformation between 
 % images im1 and im2
 % SHOW_MATCHED_POINTS - display a figure with the points used for the
 %                       construction of the matrix
+% Specify n<0 to skip ransac and return all possibly matching points
+% returned by vl_sift
+%
 % See also: MATCHED_POINTS, RANSAC, VL_SIFT
 
     if nargin<3
@@ -15,20 +18,28 @@ function [p,pi] = InterestPoints(im1, im2, n, show_matched_points)
 
     %% Get matches
     %Finds the keypoints from the two images using vl_swift
-    [~, matches,f1,f2,~,~] = keypoint_matching(im1, im2);
+    [~, matches,f1,f2,d1,d2] = keypoint_matching(im1, im2);
 
 
     %% Calculate Ransac
-    iterations = 10;
-    samples = 20; 
+    if n>0
+        iterations = 10;
+        samples = 20; 
 
-    % The transformation matrix m and t are not necessary for this
-    % implementation, therefore they are ignored
-    [~, best_inliers] = RANSAC(im1,im2,matches, f1, f2, iterations, samples);
-    %After calculating the best inliers (manhattan_dist<10), they are sorted
-    [~,idx] = sort(best_inliers(3,:));
-    %the indices from f for the best n pairs are loaded into matched_points
-    matched_points=best_inliers(1:2,idx(1:n));
+        % The transformation matrix m and t are not necessary for this
+        % implementation, therefore they are ignored
+        [~, best_inliers] = RANSAC(im1,im2,matches, f1, f2, iterations, samples);
+        %After calculating the best inliers (manhattan_dist<10), they are sorted
+        [~,idx] = sort(best_inliers(3,:));
+        %the indices from f for the best n pairs are loaded into matched_points
+        matched_points=best_inliers(1:2,idx(1:n));
+    else
+        matched_points=matches(1:2,:);
+        if (n<0)
+            n=size(matched_points,2);
+        end
+        best_inliers = matched_points;
+    end
     
     %% Plot matches - visual check
     if show_matched_points

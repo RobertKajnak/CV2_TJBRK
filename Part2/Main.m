@@ -27,7 +27,7 @@ for i=1:M-1
     %Specify number of sample points;
     n = 50;
 
-    [p_base, p_target] = InterestPoints(im1, im2, n, 1);
+    [p_base, p_target] = InterestPoints(im1, im2, -1, 0);
 
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
@@ -37,9 +37,6 @@ for i=1:M-1
     %% 3.2.1 Normalize source points
 
     [p_base_hat,T] = normalizedPi(p_base);
-
-    %% 3.2.1 Normalize target points
-
     [p_target_hat,T_prime] = normalizedPi(p_target);
 
     %% 3.2.2 Make A Matrix
@@ -48,10 +45,21 @@ for i=1:M-1
 
     F_hat = MakeF(A_hat);
 
-    F = T_prime'*F_hat*T;
+    F_prime = T_prime'*F_hat*T;
 
-    %% TODO 3.3
+    %% 3.3 RANSAC and Normalize
+   
+    [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,20,8,50);
+    
+    %also normalize them
+    [p_base_rans_hat,T_rans] = normalizedPi(p_base_rans);
+    [p_target_hat_rans,T_prime_rans] = normalizedPi(p_target_rans);
+    
+    A_hat_rans = MakeA(p_base_rans_hat,p_target_hat_rans);
 
+    F_hat_rans = MakeF(A_hat_rans);
+
+    F_prime_rans = T_prime_rans'*F_hat_rans*T_rans;
     %% 4. 
     return
 end
@@ -65,7 +73,16 @@ PVM = reshape(PVM,[215,202]);
 PVM = PVM';
 
 %% testcase
-p_base(1,:)
-p_target(1,:)
-(F*p_base(1,:)')'
-for i=0
+%figure;
+hold on;
+for i=1:215
+    color = rand(1,3);
+
+    for j = 1:2:101
+        plot(PVM(j,i),PVM(j+1,i),'x','color',color)
+    end
+end
+
+
+
+
