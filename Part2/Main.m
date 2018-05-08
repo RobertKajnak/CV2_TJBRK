@@ -1,6 +1,6 @@
 %% Add path variables and clear workspace
 addpath(genpath('./Assignment_4'))
-clear all; close all;
+%clear all; close all;
 %% Preparing file names
 path = 'data/House/';
 
@@ -27,24 +27,24 @@ for i=1:M-1
     %Specify number of sample points;
     n = 50;
 
-    [p, pi] = InterestPoints(im1, im2, n, 1);
+    [p_base, p_target] = InterestPoints(im1, im2, n, 1);
 
     %%  3.1 Eight Point Algorithm
-    A = MakeA(p,pi);
+    A = MakeA(p_base,p_target);
 
     F = MakeF(A);
 
     %% 3.2.1 Normalize source points
 
-    [p_hat,T] = normalizedPi(p);
+    [p_base_hat,T] = normalizedPi(p_base);
 
     %% 3.2.1 Normalize target points
 
-    [pi_hat,T_prime] = normalizedPi(pi);
+    [p_target_hat,T_prime] = normalizedPi(p_target);
 
     %% 3.2.2 Make A Matrix
 
-    A_hat = MakeA(p_hat,pi_hat);
+    A_hat = MakeA(p_base_hat,p_target_hat);
 
     F_hat = MakeF(A_hat);
 
@@ -53,4 +53,19 @@ for i=1:M-1
     %% TODO 3.3
 
     %% 4. 
+    return
 end
+
+%% read matchview.txt
+f=fopen('PointViewMatrix.txt','r');
+PVM = fscanf(f,'%f');
+fclose(f);
+
+PVM = reshape(PVM,[215,202]);
+PVM = PVM';
+
+%% testcase
+p_base(1,:)
+p_target(1,:)
+(F*p_base(1,:)')'
+for i=0

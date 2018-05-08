@@ -11,6 +11,6 @@ function [pi_hat,T] = normalizedPi(pi)
     s2d = sqrt(2)/d;
     T = [s2d 0 -mx*s2d;0 s2d -my*s2d;0 0 1];
 
-    pi_hat = T*pi';
+    pi_hat = (T*pi')';
 end
 
