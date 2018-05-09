@@ -16,7 +16,7 @@ function [scores, matches,f1,f2,d1,d2]= keypoint_matching(image1,image2)
     [f1,d1] = vl_sift(image1);
     [f2,d2] = vl_sift(image2);
     
-    [matches,scores] = vl_ubcmatch(d1, d2);
+    [matches,scores] = vl_ubcmatch(d1, d2,3);
     
     %vl_sift requires uint8 images, so a cast is attempted
     function [converted_image] = tosingle(image)

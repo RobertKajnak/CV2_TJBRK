@@ -13,7 +13,7 @@ for i=3:length(files)
 end
 images{end} = files(1).name;
 
-%TODO - eliminate points from background - how?
+%TODO - eliminate points from background -    %active-contour or sift param
 %% Load through all files
 for i=1:M-1
     fprintf('Preparing matches between %d<->%d',i,i+1);
@@ -27,7 +27,11 @@ for i=1:M-1
     %Specify number of sample points;
     n = 50;
 
-    [p_base, p_target] = InterestPoints(im1, im2, -1, 0);
+    %TODO change filtering approach in keypoint_matching:
+    %currently: 3 - most outliers removed
+    %default(1.5) => crappy
+    %try background removeal instead
+    [p_base, p_target] = InterestPoints(im1, im2, -1,0);
 
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
@@ -46,6 +50,8 @@ for i=1:M-1
     F_hat = MakeF(A_hat);
 
     F_prime = T_prime'*F_hat*T;
+    
+    %p_prime = (T_prime^-1*p_base_hat')';
 
     %% 3.3 RANSAC and Normalize
    
@@ -60,6 +66,20 @@ for i=1:M-1
     F_hat_rans = MakeF(A_hat_rans);
 
     F_prime_rans = T_prime_rans'*F_hat_rans*T_rans;
+    
+    %p_rans_prime = (T_prime_rans^-1*p_base_rans_hat')';
+    %% 3.end Calculate the epipolar lines and draw them    
+
+    %simple eight-point
+    drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+    
+    %normalized eight-point
+    drawEpipolar(F_prime,p_prime(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+    
+    %normalized RANSACed eight-point
+    drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
+            'normalization and RANSAC point selection']);
+    
     %% 4. 
     return
 end
