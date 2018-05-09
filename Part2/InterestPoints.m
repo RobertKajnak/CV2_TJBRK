@@ -1,4 +1,4 @@
-function [p,pi,d1,d2] = InterestPoints(im1, im2, n, show_matched_points)
+function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,im1,im2)
 % Calculates the fundamental matrix A(nx9) for the transformation between 
 % images im1 and im2
 % SHOW_MATCHED_POINTS - display a figure with the points used for the
@@ -18,7 +18,7 @@ function [p,pi,d1,d2] = InterestPoints(im1, im2, n, show_matched_points)
 
     %% Get matches
     %Finds the keypoints from the two images using vl_swift
-    [~, matches,f1,f2,d1,d2] = keypoint_matching(im1, im2);
+    %[~, matches,f1,f2,d1,d2] = keypoint_matching(im1, im2);
 
 
     %% Calculate Ransac
