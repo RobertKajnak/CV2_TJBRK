@@ -15,10 +15,16 @@ images{end} = files(3).name;
 
 %TODO - eliminate points from background -    %active-contour or sift param
 %% Load through all files TODO this comment makes little sense
+%% Initialize some variables
 isFirstIter = true;
 %TODO - do dynamic reallocation within loop
-PVM=zeros((M-1)*2,1000);
+maxExpectedFeatures=1000;
+PVM=zeros((M-1)*2,maxExpectedFeatures);
 showEpipolar = false;
+showSift = false;
+matchesf2Last=zeros(1,maxExpectedFeatures);
+PVMind = 1;
+%% Main for loop to go through all the image pairs
 for i=1:M-1
     fprintf('Preparing matches between %d<->%d\n',i,i+1);
     %% Load image pairs
@@ -36,7 +42,7 @@ for i=1:M-1
     %currently: 3 - most outliers removed
     %default(1.5) => crappy
     %try background removeal instead
-    if isFirstIter%TODO - change this to a flag
+    if isFirstIter
         [f1,d1] = vl_sift(single(im1));
     else
         f1=f2;
@@ -44,9 +50,14 @@ for i=1:M-1
     end
     
     [f2,d2] = vl_sift(single(im2));
+    if isFirstIter
+        prevMatches = matches(1,:);
+    else
+        prevMatches = matches(2,:);
+    end
     matches = vl_ubcmatch(d1, d2,3);
     
-    [p_base, p_target] = InterestPoints(f1,f2,matches, -1,0,im1,im2);
+    [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
 
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
@@ -101,25 +112,60 @@ for i=1:M-1
         %do line up with the lines (pun not intended) better on better
         %algorithms, which suggests that the algorithm is correct
     end
+    
     %% 4. 
     if isFirstIter
+        prevPVMInds=zeros(1,1000);
+    else
+        prevPVMInds=newPVMInds;
+    end
+    newPVMInds=zeros(1,1000);
+    if isFirstIter
         for j=1:size(p_base_rans,1)
-            PVM(i*2-1,j) = p_base_rans(j,1);
-            PVM(i*2,j) = p_base_rans(j,2);
+            PVM(i*2-1,PVMind) = p_base_rans(j,1);
+            PVM(i*2,PVMind) = p_base_rans(j,2);
+            %See explanation for non-first loop ones, the same logic
+            %applies here
+            indf1 = find(f1(1:2,:)==p_base_rans(j,1:2)');
+            indf1 = indf1(2)/2;
+                %indMatches = find(matches(1,:)==indf1);
+            
+                %prevPVMInds(matches(1,indMatches))=PVMind;
+            prevPVMInds(indf1)=PVMind;
+            PVMind = PVMind+1;
         end
-        PVMind = j;
     end
     
     for j=1:size(p_target_rans,1)
-        %TODO change this
-        matchesPrevPoint=true;
-        prevPoint = j;
-        if matchesPrevPoint
-            PVM(i*2+1,prevPoint) = p_target_rans(j,1);
-            PVM(i*2+2,prevPoint) = p_target_rans(j,2);
+        p_sel = p_target_rans(j,1:2)';
+        
+        %search for the point in the feature list and find it's index
+        indf2 = find(f2(1:2,:)==p_sel);
+        indf2 = indf2(2)/2;
+        
+        %use the index from the feature list to locate it in the matches
+        %list
+        indMatches = find(matches(2,:)==indf2);
+        
+        %get the value of the match- this represents the value that should
+        %be searched for in the previous matches list
+        prevMatchesVal = matches(1,indMatches);
+        
+        %in the previous matches, find the index of this element
+        matchExists= any(prevMatches==prevMatchesVal);
+        
+        %if this exists move the old value of the PVMind to the newInd
+        if matchExists
+            prevColumn = prevPVMInds(prevMatchesVal);
+            PVM(i*2+1,prevColumn) = p_sel(1);
+            PVM(i*2+2,prevColumn) = p_sel(2);
+            newPVMInds(matches(2,indMatches))=prevColumn;
         else
-            PVM(i*2+1,PVMind) = p_target_rans(j,1);
-            PVM(i*2+2,PVMind) = p_target_rans(j,2);
+            %if it doesn't add the new column value to the PVM and store
+            %it in the newInd
+            PVM(i*2+1,PVMind) = p_sel(1);
+            PVM(i*2+2,PVMind) = p_sel(2);
+            newPVMInds(matches(2,indMatches))=PVMind;
             PVMind=PVMind+1;
         end
     end
