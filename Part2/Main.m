@@ -1,6 +1,6 @@
 %% Add path variables and clear workspace
 addpath(genpath('./Assignment_4'))
-%clear all; close all;
+clear all; close all;
 %% Preparing file names
 path = 'data/House/';
 
@@ -18,7 +18,7 @@ images{end} = files(3).name;
 %% Initialize some variables
 isFirstIter = true;
 %TODO - do dynamic reallocation within loop
-maxExpectedFeatures=1000;
+maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 showEpipolar = false;
 showSift = false;
@@ -50,12 +50,13 @@ for i=1:M-1
     end
     
     [f2,d2] = vl_sift(single(im2));
-    if isFirstIter
-        prevMatches = matches(1,:);
-    else
+    if ~isFirstIter
         prevMatches = matches(2,:);
     end
     matches = vl_ubcmatch(d1, d2,3);
+    if isFirstIter
+        prevMatches = matches(1,:);
+    end
     
     [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
 
@@ -115,11 +116,11 @@ for i=1:M-1
     
     %% 4. 
     if isFirstIter
-        prevPVMInds=zeros(1,1000);
+        prevPVMInds=zeros(1,maxExpectedFeatures);
     else
         prevPVMInds=newPVMInds;
     end
-    newPVMInds=zeros(1,1000);
+    newPVMInds=zeros(1,maxExpectedFeatures);
     if isFirstIter
         for j=1:size(p_base_rans,1)
             PVM(i*2-1,PVMind) = p_base_rans(j,1);
@@ -127,11 +128,11 @@ for i=1:M-1
             %See explanation for non-first loop ones, the same logic
             %applies here
             indf1 = find(f1(1:2,:)==p_base_rans(j,1:2)');
-            indf1 = indf1(2)/2;
-                %indMatches = find(matches(1,:)==indf1);
-            
+            indf1 = indf1(2:2:end)/2;
+            indMatches = find(ismember(matches(1,:),indf1));
+            matchesVal = matches(1,indMatches);
                 %prevPVMInds(matches(1,indMatches))=PVMind;
-            prevPVMInds(indf1)=PVMind;
+            prevPVMInds(matchesVal)=PVMind;
             PVMind = PVMind+1;
         end
     end
@@ -141,25 +142,29 @@ for i=1:M-1
         
         %search for the point in the feature list and find it's index
         indf2 = find(f2(1:2,:)==p_sel);
-        indf2 = indf2(2)/2;
+        indf2 = indf2(2:2:end)/2;
         
         %use the index from the feature list to locate it in the matches
         %list
-        indMatches = find(matches(2,:)==indf2);
+        indMatches = find(ismember(matches(2,:),indf2));
         
         %get the value of the match- this represents the value that should
         %be searched for in the previous matches list
         prevMatchesVal = matches(1,indMatches);
         
         %in the previous matches, find the index of this element
-        matchExists= any(prevMatches==prevMatchesVal);
+        matchExists= any(ismember(prevMatches,prevMatchesVal));
         
         %if this exists move the old value of the PVMind to the newInd
         if matchExists
-            prevColumn = prevPVMInds(prevMatchesVal);
-            PVM(i*2+1,prevColumn) = p_sel(1);
-            PVM(i*2+2,prevColumn) = p_sel(2);
-            newPVMInds(matches(2,indMatches))=prevColumn;
+            [~,prevColumn] = find(prevPVMInds(prevMatchesVal));
+            %The existance of this line hints to the robability of this not
+            %being correct TODO - fix it
+            if ~isempty(prevColumn)
+                PVM(i*2+1,prevColumn) = p_sel(1);
+                PVM(i*2+2,prevColumn) = p_sel(2);
+                newPVMInds(matches(2,indMatches))=prevColumn;
+            end
         else
             %if it doesn't add the new column value to the PVM and store
             %it in the newInd
@@ -176,6 +181,8 @@ end
 
 %% plot PVM
 figure('name','Point-view matrix representation');
+%filter out the zeros
+PVM=PVM(:,1:find(PVM(end,:),1,'last'));
 imshow(PVM<1)
 return
 %% read matchview.txt
