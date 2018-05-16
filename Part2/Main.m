@@ -1,6 +1,6 @@
 %% Add path variables and clear workspace
 addpath(genpath('./Assignment_4'))
-clear all; close all;
+clear all; %close all;
 %% Preparing file names
 path = 'data/House/';
 
@@ -82,7 +82,7 @@ for i=1:M-1
 
     %% 3.3 RANSAC and Normalize
    
-    [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,50);
+    [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,500);
     
     %also normalize them
     [p_base_rans_hat,T_rans] = normalizedPi(p_base_rans);
@@ -98,10 +98,10 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+        %drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+        %drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
         drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
@@ -115,66 +115,39 @@ for i=1:M-1
     end
     
     %% 4. 
+    p_sel_base = p_base;
+    p_sel_target = p_target;
     if isFirstIter
-        prevPVMInds=zeros(1,maxExpectedFeatures);
+        for j=1:size(p_sel_base,1)
+            PVM(1,PVMind) = p_sel_base(j,1);
+            PVM(2,PVMind) = p_sel_base(j,2);
+            
+            PVM(3,PVMind) = p_sel_target(j,1);
+            PVM(4,PVMind) = p_sel_target(j,2);
+            PVMind=PVMind+1;
+        end
     else
-        prevPVMInds=newPVMInds;
-    end
-    newPVMInds=zeros(1,maxExpectedFeatures);
-    if isFirstIter
-        for j=1:size(p_base_rans,1)
-            PVM(i*2-1,PVMind) = p_base_rans(j,1);
-            PVM(i*2,PVMind) = p_base_rans(j,2);
-            %See explanation for non-first loop ones, the same logic
-            %applies here
-            indf1 = find(f1(1:2,:)==p_base_rans(j,1:2)');
-            indf1 = indf1(2:2:end)/2;
-            indMatches = find(ismember(matches(1,:),indf1));
-            matchesVal = matches(1,indMatches);
-                %prevPVMInds(matches(1,indMatches))=PVMind;
-            prevPVMInds(matchesVal)=PVMind;
-            PVMind = PVMind+1;
+        for j=1:size(p_sel_target,1)
+            isFound = false;
+            for k=1:PVMind-1
+                if PVM(i*2-1,k) == p_sel_base(j,1) && ...
+                   PVM(i*2,k) == p_sel_base(j,2)
+                    PVM(i*2+1,k) = p_sel_target(j,1);
+                    PVM(i*2+2,k)   = p_sel_target(j,2);
+                    isFound=true;
+                    break;
+                end
+            end
+            if ~isFound
+                PVM(i*2-1,PVMind) = p_sel_base(j,1);
+                PVM(i*2,PVMind)   = p_sel_base(j,2);
+                PVM(i*2+1,PVMind) = p_sel_target(j,1);
+                PVM(i*2+2,PVMind) = p_sel_target(j,2);
+                PVMind=PVMind+1;
+            end
         end
     end
     
-    for j=1:size(p_target_rans,1)
-        p_sel = p_target_rans(j,1:2)';
-        
-        %search for the point in the feature list and find it's index
-        indf2 = find(f2(1:2,:)==p_sel);
-        indf2 = indf2(2:2:end)/2;
-        
-        %use the index from the feature list to locate it in the matches
-        %list
-        indMatches = find(ismember(matches(2,:),indf2));
-        
-        %get the value of the match- this represents the value that should
-        %be searched for in the previous matches list
-        prevMatchesVal = matches(1,indMatches);
-        
-        %in the previous matches, find the index of this element
-        matchExists= any(ismember(prevMatches,prevMatchesVal));
-        
-        %if this exists move the old value of the PVMind to the newInd
-        if matchExists
-            [~,prevColumn] = find(prevPVMInds(prevMatchesVal));
-            %The existance of this line hints to the robability of this not
-            %being correct TODO - fix it
-            if ~isempty(prevColumn)
-                PVM(i*2+1,prevColumn) = p_sel(1);
-                PVM(i*2+2,prevColumn) = p_sel(2);
-                newPVMInds(matches(2,indMatches))=prevColumn;
-            end
-        else
-            %if it doesn't add the new column value to the PVM and store
-            %it in the newInd
-            PVM(i*2+1,PVMind) = p_sel(1);
-            PVM(i*2+2,PVMind) = p_sel(2);
-            newPVMInds(matches(2,indMatches))=PVMind;
-            PVMind=PVMind+1;
-        end
-    end
-    %return
     
     isFirstIter = false;
 end
