@@ -32,6 +32,7 @@ function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,i
         %After calculating the best inliers (manhattan_dist<10), they are sorted
         [~,idx] = sort(best_inliers(3,:));
         %the indices from f for the best n pairs are loaded into matched_points
+        n=min(n,size(best_inliers,2));
         matched_points=best_inliers(1:2,idx(1:n));
     else
         matched_points=matches(1:2,:);
@@ -47,10 +48,11 @@ function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,i
         imshow(cat(2, im1, im2));
 
         hold on;
-        x1 = f1(1,matched_points(1,:)) ;
-        x2 = f2(1,matched_points(2,:)) + size(im1,2) ;
-        y1 = f1(2,matched_points(1,:)) ;
-        y2 = f2(2,matched_points(2,:)) ;
+        idx = randi(400,30,1);
+        x1 = f1(1,matched_points(1,idx)) ;
+        x2 = f2(1,matched_points(2,idx)) + size(im1,2) ;
+        y1 = f1(2,matched_points(1,idx)) ;
+        y2 = f2(2,matched_points(2,idx)) ;
 
         line([x1; x2], [y1; y2], 'LineWidth', 1);
         hold off;
