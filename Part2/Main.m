@@ -19,9 +19,10 @@ images{end} = files(3).name;
 isFirstIter = true;
 %TODO - do dynamic reallocation within loop
 maxExpectedFeatures=2000;
-PVM=zeros((M-1)*2,maxExpectedFeatures);
-showEpipolar = false;
 showSift = false;
+showEpipolar = false;
+
+PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
 PVMind = 1;
 %% Main for loop to go through all the image pairs
@@ -53,13 +54,16 @@ for i=1:M-1
     if ~isFirstIter
         prevMatches = matches(2,:);
     end
-    matches = vl_ubcmatch(d1, d2,3);
+    matches = vl_ubcmatch(d1, d2,5);
     if isFirstIter
         prevMatches = matches(1,:);
     end
     
-    [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
-
+    [p_base, p_target] = InterestPoints(f1,f2,matches,-1,showSift,im1,im2);
+    if size(p_base,1)<8
+        warning('Less than 8 matching points found. Skipping iteration')
+        continue;
+    end
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
 
@@ -78,7 +82,7 @@ for i=1:M-1
 
     F_prime = T_prime'*F_hat*T;
     
-    %p_base_prime = (T_prime^-1*p_base_hat')';
+    p_base_prime = (T_prime^-1*p_base_hat')';
 
     %% 3.3 RANSAC and Normalize
    
@@ -98,10 +102,10 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        %drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        %drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
         drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
@@ -147,8 +151,6 @@ for i=1:M-1
             end
         end
     end
-    
-    
     isFirstIter = false;
 end
 

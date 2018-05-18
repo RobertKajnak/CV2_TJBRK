@@ -12,6 +12,10 @@ function [best_transformation, best_inliers]= RANSAC(image1,image2,matches, f1, 
     if nargin<9
         show_all_matching_points = false;
     end
+    if P>size(matches,2)
+        warning('Number of samples larger than dataset. Using all points');
+        P=size(matches,2);
+    end
 
     best_num_inliers = -inf;
     best_inliers = [];

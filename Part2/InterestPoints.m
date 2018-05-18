@@ -30,10 +30,10 @@ function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,i
         % implementation, therefore they are ignored
         [~, best_inliers] = RANSAC(im1,im2,matches, f1, f2, iterations, samples);
         %After calculating the best inliers (manhattan_dist<10), they are sorted
-        [~,idx] = sort(best_inliers(3,:));
-        %the indices from f for the best n pairs are loaded into matched_points
-        n=min(n,size(best_inliers,2));
-        matched_points=best_inliers(1:2,idx(1:n));
+        if n>size(best_inliers,2)
+            warning('More samples requested than daaset size. Using all points');
+            n=size(best_inliers,2);
+        end
     else
         matched_points=matches(1:2,:);
         if (n<0)
@@ -58,7 +58,7 @@ function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,i
     end
 
     %% Calculate matrix A
-
+    n=size(best_inliers,2);
     p = zeros(n,3);
     pi = zeros(n,3);
     

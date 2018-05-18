@@ -16,6 +16,11 @@ function [p1_best,p2_best,F,ind]= RANSAC_Sampson(p1, p2, N, iter, threshhold)
         threshhold = 0.0005;
     end
 
+    if N>size(p1,1)
+        warning('Number of samples larger than dataset. Using all points');
+        N=size(p1,1);
+    end
+    
     best_num_inliers = -inf;
     p1_best=[];
     p2_best=[];
