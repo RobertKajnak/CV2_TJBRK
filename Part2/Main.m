@@ -1,6 +1,6 @@
 %% Add path variables and clear workspace
 addpath(genpath('./Assignment_4'))
-clear all; close all;
+clear all; %close all;
 %% Preparing file names
 path = 'data/House/';
 
@@ -80,7 +80,7 @@ for i=1:M-1
 
     %% 3.3 RANSAC and Normalize
    
-    [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,50);
+    [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,500);
     
     %also normalize them
     [p_base_rans_hat,T_rans] = normalizedPi(p_base_rans);
@@ -96,17 +96,28 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
+<<<<<<< HEAD
         drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
         drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
+=======
+        %drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+
+        %normalized eight-point
+        %drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+>>>>>>> 235c0c42891a2b491a1ac3b771f3714863e032da
 
         %normalized RANSACed eight-point
         drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
                 'normalization and RANSAC point selection']);
     end
     
+<<<<<<< HEAD
  %% 4. 
+=======
+    %% 4. 
+>>>>>>> 235c0c42891a2b491a1ac3b771f3714863e032da
     p_sel_base = p_base;
     p_sel_target = p_target;
     if isFirstIter
