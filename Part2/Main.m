@@ -1,6 +1,6 @@
 %% Add path variables and clear workspace
-addpath(genpath('./Assignment_4'))
-clear all; %close all;
+run('.\vlfeat\toolbox\vl_setup');
+clear all; close all;
 %% Preparing file names
 path = 'data/House/';
 
@@ -21,7 +21,7 @@ isFirstIter = true;
 maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 showSift = false;
-showEpipolar = true;
+showEpipolar = false;
 
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
@@ -114,6 +114,8 @@ for i=1:M-1
   %% 4.
     p_sel_base = p_base;
     p_sel_target = p_target;
+    %if first iteration add all points from first two images; these are
+    %guaranteed to be matches
     if isFirstIter
         for j=1:size(p_sel_base,1)
             PVM(1,PVMind) = p_sel_base(j,1);
@@ -121,11 +123,14 @@ for i=1:M-1
             
             PVM(3,PVMind) = p_sel_target(j,1);
             PVM(4,PVMind) = p_sel_target(j,2);
+            %PVMind keeps track of the last inserded column
             PVMind=PVMind+1;
         end
     else
         for j=1:size(p_sel_target,1)
             isFound = false;
+            %if a point is found the lines pertaining to the next image
+            %are filled.
             for k=1:PVMind-1
                 if PVM(i*2-1,k) == p_sel_base(j,1) && ...
                    PVM(i*2,k) == p_sel_base(j,2)
@@ -135,6 +140,8 @@ for i=1:M-1
                     break;
                 end
             end
+            %if the point is missing a new column is introduced, adding
+            %both current and previous image's feature's coordinates to it
             if ~isFound
                 PVM(i*2-1,PVMind) = p_sel_base(j,1);
                 PVM(i*2,PVMind)   = p_sel_base(j,2);
@@ -154,10 +161,7 @@ PVM=PVM(:,1:find(PVM(end,:),1,'last'));
 imshow(PVM<1)
 
 
-
-
-
-
+%% Alternative visualization method
 % return
 % %% read matchview.txt
 % f=fopen('PointViewMatrix.txt','r');
