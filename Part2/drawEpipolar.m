@@ -1,25 +1,47 @@
-function drawEpipolar(F,p,im,title)
+function drawEpipolar(F,p_base,p_target,im1,im2,title)
 
-    x0=0;
-    x1=size(im,2);
+    figure('name',title);
+    imshow(im1);
+    hold on;
+
+    eline = F'*p_target';
+    plot(p_base(:,1),p_base(:,2),'O red');
     
-    %ax+by+c=0 => y=-ax/b-c/b;
-    y=@(x,eq)-eq(1,:).*x./eq(2,:)-eq(3,:)./eq(2,:);
-    
-    %eight-point
-    eq = F*p';
-    y0 = y(x0,eq);
-    y1 = y(x1,eq);
+    %connect points that are "off screen"
+    for i=1:size(p_base,1)
+        
+        a = -eline(1,i) / eline(2,i);
+        
+        x = p_base(i,1) - size(im1,2);
+        xx = p_base(i,1) + size(im1,2);
+        
+        y = p_base(i,2) - size(im1,2)*a;
+        yy = p_base(i,2) + size(im1,2)*a;
+
+        line([x xx],[y yy]);
+    end
+    hold off
     
     figure('name',title);
-    imshow(im);
+    imshow(im1);
     hold on;
-    for i=1:size(p,1)
-        plot(p(i,1),p(i,2),'o', 'MarkerFaceColor', 'g','color','g');
-        plot([x0,x1],[y0(i),y1(i)],'g');
-    end
-    hold off;
 
+    eline = F*p_base';
+    plot(p_target(:,1),p_target(:,2),'O red');
+    
+    for i=1:size(p_target,1)
+        
+        a = -eline(1,i) / eline(2,i);
+        
+        x = p_target(i,1) - size(im2,2);
+        xx = p_target(i,1) + size(im2,2);
+        
+        y = p_target(i,2) - size(im2,2)*a;
+        yy = p_target(i,2) + size(im2,2)*a;
+
+        line([x xx],[y yy])
+    end
+    hold off
 
 
 end

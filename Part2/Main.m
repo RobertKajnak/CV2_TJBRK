@@ -19,6 +19,8 @@ images{end} = files(3).name;
 isFirstIter = true;
 %TODO - do dynamic reallocation within loop
 maxExpectedFeatures=2000;
+PVM=zeros((M-1)*2,maxExpectedFeatures);
+showEpipolar = true;
 showSift = false;
 showEpipolar = false;
 
@@ -37,11 +39,11 @@ for i=1:M-1
 
     %% Get points of interest
     %Specify number of sample points;
-    n = 50;
+    n = 8;
 
-    %TODO change filtering approach in InterestPoints to be parameter:
-    %currently: 3 - most outliers removed
-    %default(1.5) => crappy
+    % 5: actually starts working...
+    % currently: 3 - most outliers removed
+    % default(1.5) => crappy
     %try background removeal instead
     if isFirstIter
         [f1,d1] = vl_sift(single(im1));
@@ -58,7 +60,6 @@ for i=1:M-1
     if isFirstIter
         prevMatches = matches(1,:);
     end
-    
     [p_base, p_target] = InterestPoints(f1,f2,matches,30,showSift,im1,im2);
     if size(p_base,1)<8
         warning('Less than 8 matching points found. Skipping iteration')
@@ -83,7 +84,6 @@ for i=1:M-1
     F_prime = T_prime'*F_hat*T;
     
     p_base_prime = (T_prime^-1*p_base_hat')';
-
     %% 3.3 RANSAC and Normalize
    
     [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,500);
@@ -98,27 +98,21 @@ for i=1:M-1
 
     F_prime_rans = T_prime_rans'*F_hat_rans*T_rans;
     
-    %p_base_rans_prime = (T_prime_rans^-1*p_base_rans_hat')';
+    
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
                 'normalization and RANSAC point selection']);
-        %TODO - looks really unstable. Why? (even for the ransaced one)
-        %it should be the same, as it should dependent on the points selected,
-        %if they are selected correctly and the F should be basically the same
-        %for any runs, given the same two images. On the other hand, the points
-        %do line up with the lines (pun not intended) better on better
-        %algorithms, which suggests that the algorithm is correct
     end
-    
-    %% 4. 
+
+  %% 4.
     p_sel_base = p_base;
     p_sel_target = p_target;
     if isFirstIter
@@ -159,30 +153,34 @@ figure('name','Point-view matrix representation');
 %filter out the zeros
 PVM=PVM(:,1:find(PVM(end,:),1,'last'));
 imshow(PVM<1)
-return
-%% read matchview.txt
-f=fopen('PointViewMatrix.txt','r');
-PVM = fscanf(f,'%f');
-fclose(f);
 
-PVM = reshape(PVM,[215,202]);
-PVM = PVM';
+
+
+
+
+
+% return
+% %% read matchview.txt
+% f=fopen('PointViewMatrix.txt','r');
+% PVM = fscanf(f,'%f');
+% fclose(f);
+% 
+% PVM = reshape(PVM,[215,202]);
+% PVM = PVM';
 
 %% testcase
-figure;
-imshow(imread(sprintf([path,images{1}],1)));
-hold on;
-for i=1:215
-    color = rand(1,3);
-
-    for j = 1:2:101
-        color=color*.98;
-        if PVM(j,i)~=0 && PVM(j+1,i) ~=0
-            plot(PVM(j,i),PVM(j+1,i),'x','color',color)
-        end
-    end
-end
-
-
+% figure;
+% imshow(imread(sprintf([path,images{1}],1)));
+% hold on;
+% for i=1:215
+%     color = rand(1,3);
+% 
+%     for j = 1:2:101
+%         color=color*.98;
+%         if PVM(j,i)~=0 && PVM(j+1,i) ~=0
+%             plot(PVM(j,i),PVM(j+1,i),'x','color',color)
+%         end
+%     end
+% end
 
 
