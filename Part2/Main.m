@@ -2,13 +2,18 @@
 run('.\vlfeat\toolbox\vl_setup');
 clear all; close all;
 
-%% Debug/partial result flags
-showSift = false;
-showEpipolar = true;
-stopAfterFirstIteration = true;
-
+clear all; %close all;
 %% Preparing file names
 path = 'data/House/';
+
+% specify which plots to show
+showEpipolar = false;
+showSift = false;
+showPVM = false;
+% use example PVM from file, false runs on house images
+examplePVM = false;
+% number of consecutive images to stitch together for SFM
+nr_consec_imgs = 4;
 
 files = dir(path);
 %The initial files is taken twice (1->2 and end->1)
@@ -19,16 +24,15 @@ for i=3:length(files)
 end
 images{end} = files(3).name;
 
+%TODO - eliminate points from background -    %active-contour or sift param
+%% Load through all files TODO this comment makes little sense
 %% Initialize some variables
 isFirstIter = true;
-%the maximum number of features that can appear per iteration -- this also
-%determines the size of PVM. If index out of bounds, increase this
+%TODO - do dynamic reallocation within loop
 maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
 PVMind = 1;
-
-
 %% Main for loop to go through all the image pairs
 for i=1:M-1
     fprintf('Preparing matches between %d<->%d\n',i,i+1);
@@ -62,11 +66,9 @@ for i=1:M-1
     if isFirstIter
         prevMatches = matches(1,:);
     end
-    [p_base, p_target] = InterestPoints(f1,f2,matches,30,showSift,im1,im2);
-    if size(p_base,1)<8
-        warning('Less than 8 matching points found. Skipping iteration')
-        continue;
-    end
+
+     [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
+
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
 
@@ -84,8 +86,7 @@ for i=1:M-1
     F_hat = MakeF(A_hat);
 
     F_prime = T_prime'*F_hat*T;
-    
-    p_base_prime = (T_prime^-1*p_base_hat')';
+
     %% 3.3 RANSAC and Normalize
    
     [p_base_rans,p_target_rans,F_rans] = RANSAC_Sampson(p_base,p_target,8,500);
@@ -104,21 +105,19 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by '...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
                 'normalization and RANSAC point selection']);
     end
 
   %% 4.
     p_sel_base = p_base;
     p_sel_target = p_target;
-    %if first iteration add all points from first two images; these are
-    %guaranteed to be matches
     if isFirstIter
         for j=1:size(p_sel_base,1)
             PVM(1,PVMind) = p_sel_base(j,1);
@@ -126,14 +125,11 @@ for i=1:M-1
             
             PVM(3,PVMind) = p_sel_target(j,1);
             PVM(4,PVMind) = p_sel_target(j,2);
-            %PVMind keeps track of the last inserded column
             PVMind=PVMind+1;
         end
     else
         for j=1:size(p_sel_target,1)
             isFound = false;
-            %if a point is found the lines pertaining to the next image
-            %are filled.
             for k=1:PVMind-1
                 if PVM(i*2-1,k) == p_sel_base(j,1) && ...
                    PVM(i*2,k) == p_sel_base(j,2)
@@ -143,8 +139,6 @@ for i=1:M-1
                     break;
                 end
             end
-            %if the point is missing a new column is introduced, adding
-            %both current and previous image's feature's coordinates to it
             if ~isFound
                 PVM(i*2-1,PVMind) = p_sel_base(j,1);
                 PVM(i*2,PVMind)   = p_sel_base(j,2);
@@ -154,42 +148,84 @@ for i=1:M-1
             end
         end
     end
-    if stopAfterFirstIteration
-        return;
-    end
+    
+    
     isFirstIter = false;
 end
 
 %% plot PVM
-figure('name','Point-view matrix representation');
-%filter out the zeros
-PVM=PVM(:,1:find(PVM(end,:),1,'last'));
-imshow(PVM<1)
+if showPVM
+    figure('name','Point-view matrix representation');
+    %filter out the zeros
+    PVM=PVM(:,1:find(PVM(end,:),1,'last'));
+    imshow(PVM<1)
+end
+ 
 
 
-%% Alternative visualization method
-% return
-% %% read matchview.txt
-% f=fopen('PointViewMatrix.txt','r');
-% PVM = fscanf(f,'%f');
-% fclose(f);
-% 
-% PVM = reshape(PVM,[215,202]);
-% PVM = PVM';
+%% 5
 
-%% testcase
-% figure;
-% imshow(imread(sprintf([path,images{1}],1)));
-% hold on;
-% for i=1:215
-%     color = rand(1,3);
-% 
-%     for j = 1:2:101
-%         color=color*.98;
-%         if PVM(j,i)~=0 && PVM(j+1,i) ~=0
-%             plot(PVM(j,i),PVM(j+1,i),'x','color',color)
-%         end
-%     end
-% end
+if examplePVM
+    % read matchview.txt
+    f=fopen('PointViewMatrix.txt','r');
+    PVM = fscanf(f,'%f');
+    fclose(f);
+    PVM = reshape(PVM,[215,202]);
+    PVM = PVM';
+
+end
+
+
+img_range = 1:2:nr_consec_imgs*2 -3;
+img_x = 0;
+[height, width] = size(PVM);
+total_model = [];
+last_transf = [];
+
+
+
+for idx = img_range
+    
+    %find dense block
+    non_zero = find(PVM(idx,:));
+    non_zero = non_zero(non_zero>img_x);
+    dense_block = [PVM(idx,non_zero);PVM(idx+1,non_zero);PVM(idx+2,non_zero);PVM(idx+3,non_zero)];
+    if ~examplePVM
+        img_x = size(non_zero,2);
+    end
+    %normalise
+    mean_rows = mean(dense_block,2);
+    dense_block = dense_block - mean_rows;
+    % -> measurement matrix
+    
+    %SVD
+    [U,W,V] = svd(dense_block);
+    
+    %reduce to rank 3
+    U = U(:,1:3);
+    W = W(1:3,1:3);
+    V = V';
+    V = V(1:3,:);
+    
+    %derive motion and shape/structure
+    M = U*(W.^0.5);
+    S = (W.^0.5)*V;
+
+    %stitching
+    if idx==img_range(1)
+        total_model = [S];
+    else
+        %must have equal length/columns
+        samples = min(size(S,2),size(last_transf,2));
+        [d,Z,transform] = procrustes(last_transf(:,randsample(size(last_transf,2),samples )), S(:,randsample(size(S,2),samples ))  );
+        total_model = [total_model Z];
+    end
+    
+    last_transf = S;
+ 
+end
+
+fscatter3(total_model(1,:),total_model(2,:),total_model(3,:),total_model(3,:) );
+
 
 
