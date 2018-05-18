@@ -20,9 +20,8 @@ isFirstIter = true;
 %TODO - do dynamic reallocation within loop
 maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
-showEpipolar = true;
 showSift = false;
-showEpipolar = false;
+showEpipolar = true;
 
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
@@ -108,7 +107,7 @@ for i=1:M-1
         drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by '...
                 'normalization and RANSAC point selection']);
     end
 
