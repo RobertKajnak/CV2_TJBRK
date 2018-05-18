@@ -4,8 +4,8 @@ clear all; close all;
 
 %% Debug/partial result flags
 showSift = false;
-showEpipolar = false;
-stopAfterFirstIteration = false;
+showEpipolar = true;
+stopAfterFirstIteration = true;
 
 %% Preparing file names
 path = 'data/House/';
@@ -104,13 +104,13 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by '...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by '...
                 'normalization and RANSAC point selection']);
     end
 
