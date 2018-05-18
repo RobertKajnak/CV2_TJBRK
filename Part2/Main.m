@@ -20,7 +20,7 @@ isFirstIter = true;
 %TODO - do dynamic reallocation within loop
 maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
-showEpipolar = false;
+showEpipolar = true;
 showSift = false;
 matchesf2Last=zeros(1,maxExpectedFeatures);
 PVMind = 1;
@@ -36,11 +36,11 @@ for i=1:M-1
 
     %% Get points of interest
     %Specify number of sample points;
-    n = 50;
+    n = 8;
 
-    %TODO change filtering approach in InterestPoints to be parameter:
-    %currently: 3 - most outliers removed
-    %default(1.5) => crappy
+    % 5: actually starts working...
+    % currently: 3 - most outliers removed
+    % default(1.5) => crappy
     %try background removeal instead
     if isFirstIter
         [f1,d1] = vl_sift(single(im1));
@@ -53,12 +53,12 @@ for i=1:M-1
     if ~isFirstIter
         prevMatches = matches(2,:);
     end
-    matches = vl_ubcmatch(d1, d2,3);
+    matches = vl_ubcmatch(d1, d2,5);
     if isFirstIter
         prevMatches = matches(1,:);
     end
-    
-    [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
+
+     [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
 
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
@@ -77,8 +77,6 @@ for i=1:M-1
     F_hat = MakeF(A_hat);
 
     F_prime = T_prime'*F_hat*T;
-    
-    %p_base_prime = (T_prime^-1*p_base_hat')';
 
     %% 3.3 RANSAC and Normalize
    
@@ -94,87 +92,54 @@ for i=1:M-1
 
     F_prime_rans = T_prime_rans'*F_hat_rans*T_rans;
     
-    %p_base_rans_prime = (T_prime_rans^-1*p_base_rans_hat')';
+    
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
                 'normalization and RANSAC point selection']);
-        %TODO - looks really unstable. Why? (even for the ransaced one)
-        %it should be the same, as it should dependent on the points selected,
-        %if they are selected correctly and the F should be basically the same
-        %for any runs, given the same two images. On the other hand, the points
-        %do line up with the lines (pun not intended) better on better
-        %algorithms, which suggests that the algorithm is correct
     end
     
-    %% 4. 
+ %% 4. 
+    p_sel_base = p_base;
+    p_sel_target = p_target;
     if isFirstIter
-        prevPVMInds=zeros(1,maxExpectedFeatures);
-    else
-        prevPVMInds=newPVMInds;
-    end
-    newPVMInds=zeros(1,maxExpectedFeatures);
-    if isFirstIter
-        for j=1:size(p_base_rans,1)
-            PVM(i*2-1,PVMind) = p_base_rans(j,1);
-            PVM(i*2,PVMind) = p_base_rans(j,2);
-            %See explanation for non-first loop ones, the same logic
-            %applies here
-            indf1 = find(f1(1:2,:)==p_base_rans(j,1:2)');
-            indf1 = indf1(2:2:end)/2;
-            indMatches = find(ismember(matches(1,:),indf1));
-            matchesVal = matches(1,indMatches);
-                %prevPVMInds(matches(1,indMatches))=PVMind;
-            prevPVMInds(matchesVal)=PVMind;
-            PVMind = PVMind+1;
-        end
-    end
-    
-    for j=1:size(p_target_rans,1)
-        p_sel = p_target_rans(j,1:2)';
-        
-        %search for the point in the feature list and find it's index
-        indf2 = find(f2(1:2,:)==p_sel);
-        indf2 = indf2(2:2:end)/2;
-        
-        %use the index from the feature list to locate it in the matches
-        %list
-        indMatches = find(ismember(matches(2,:),indf2));
-        
-        %get the value of the match- this represents the value that should
-        %be searched for in the previous matches list
-        prevMatchesVal = matches(1,indMatches);
-        
-        %in the previous matches, find the index of this element
-        matchExists= any(ismember(prevMatches,prevMatchesVal));
-        
-        %if this exists move the old value of the PVMind to the newInd
-        if matchExists
-            [~,prevColumn] = find(prevPVMInds(prevMatchesVal));
-            %The existance of this line hints to the robability of this not
-            %being correct TODO - fix it
-            if ~isempty(prevColumn)
-                PVM(i*2+1,prevColumn) = p_sel(1);
-                PVM(i*2+2,prevColumn) = p_sel(2);
-                newPVMInds(matches(2,indMatches))=prevColumn;
-            end
-        else
-            %if it doesn't add the new column value to the PVM and store
-            %it in the newInd
-            PVM(i*2+1,PVMind) = p_sel(1);
-            PVM(i*2+2,PVMind) = p_sel(2);
-            newPVMInds(matches(2,indMatches))=PVMind;
+        for j=1:size(p_sel_base,1)
+            PVM(1,PVMind) = p_sel_base(j,1);
+            PVM(2,PVMind) = p_sel_base(j,2);
+            
+            PVM(3,PVMind) = p_sel_target(j,1);
+            PVM(4,PVMind) = p_sel_target(j,2);
             PVMind=PVMind+1;
         end
+    else
+        for j=1:size(p_sel_target,1)
+            isFound = false;
+            for k=1:PVMind-1
+                if PVM(i*2-1,k) == p_sel_base(j,1) && ...
+                   PVM(i*2,k) == p_sel_base(j,2)
+                    PVM(i*2+1,k) = p_sel_target(j,1);
+                    PVM(i*2+2,k)   = p_sel_target(j,2);
+                    isFound=true;
+                    break;
+                end
+            end
+            if ~isFound
+                PVM(i*2-1,PVMind) = p_sel_base(j,1);
+                PVM(i*2,PVMind)   = p_sel_base(j,2);
+                PVM(i*2+1,PVMind) = p_sel_target(j,1);
+                PVM(i*2+2,PVMind) = p_sel_target(j,2);
+                PVMind=PVMind+1;
+            end
+        end
     end
-    %return
+    
     
     isFirstIter = false;
 end
@@ -184,30 +149,34 @@ figure('name','Point-view matrix representation');
 %filter out the zeros
 PVM=PVM(:,1:find(PVM(end,:),1,'last'));
 imshow(PVM<1)
-return
-%% read matchview.txt
-f=fopen('PointViewMatrix.txt','r');
-PVM = fscanf(f,'%f');
-fclose(f);
 
-PVM = reshape(PVM,[215,202]);
-PVM = PVM';
+
+
+
+
+
+% return
+% %% read matchview.txt
+% f=fopen('PointViewMatrix.txt','r');
+% PVM = fscanf(f,'%f');
+% fclose(f);
+% 
+% PVM = reshape(PVM,[215,202]);
+% PVM = PVM';
 
 %% testcase
-figure;
-imshow(imread(sprintf([path,images{1}],1)));
-hold on;
-for i=1:215
-    color = rand(1,3);
-
-    for j = 1:2:101
-        color=color*.98;
-        if PVM(j,i)~=0 && PVM(j+1,i) ~=0
-            plot(PVM(j,i),PVM(j+1,i),'x','color',color)
-        end
-    end
-end
-
-
+% figure;
+% imshow(imread(sprintf([path,images{1}],1)));
+% hold on;
+% for i=1:215
+%     color = rand(1,3);
+% 
+%     for j = 1:2:101
+%         color=color*.98;
+%         if PVM(j,i)~=0 && PVM(j+1,i) ~=0
+%             plot(PVM(j,i),PVM(j+1,i),'x','color',color)
+%         end
+%     end
+% end
 
 
