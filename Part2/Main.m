@@ -1,6 +1,12 @@
 %% Add path variables and clear workspace
 run('.\vlfeat\toolbox\vl_setup');
 clear all; close all;
+
+%% Debug/partial result flags
+showSift = false;
+showEpipolar = false;
+stopAfterFirstIteration = false;
+
 %% Preparing file names
 path = 'data/House/';
 
@@ -13,19 +19,16 @@ for i=3:length(files)
 end
 images{end} = files(3).name;
 
-%TODO - eliminate points from background -    %active-contour or sift param
-%% Load through all files TODO this comment makes little sense
 %% Initialize some variables
 isFirstIter = true;
-%TODO - do dynamic reallocation within loop
+%the maximum number of features that can appear per iteration -- this also
+%determines the size of PVM. If index out of bounds, increase this
 maxExpectedFeatures=2000;
-PVM=zeros((M-1)*2,maxExpectedFeatures);
-showSift = false;
-showEpipolar = false;
-
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
 PVMind = 1;
+
+
 %% Main for loop to go through all the image pairs
 for i=1:M-1
     fprintf('Preparing matches between %d<->%d\n',i,i+1);
@@ -150,6 +153,9 @@ for i=1:M-1
                 PVMind=PVMind+1;
             end
         end
+    end
+    if stopAfterFirstIteration
+        return;
     end
     isFirstIter = false;
 end

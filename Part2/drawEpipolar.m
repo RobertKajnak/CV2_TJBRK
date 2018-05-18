@@ -1,6 +1,6 @@
 function drawEpipolar(F,p_base,p_target,im1,im2,title)
 
-    figure('name',title);
+    figure('name',[title,' on image 1']);
     imshow(im1);
     hold on;
 
@@ -22,7 +22,7 @@ function drawEpipolar(F,p_base,p_target,im1,im2,title)
     end
     hold off
     
-    figure('name',title);
+    figure('name',[title,' on image 2']);
     imshow(im1);
     hold on;
 
