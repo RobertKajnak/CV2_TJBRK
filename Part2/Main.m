@@ -1,19 +1,20 @@
-%% Add path variables and clear workspace
+% Add path variables and clear workspace
 run('.\vlfeat\toolbox\vl_setup');
 clear all; close all;
 
-clear all; %close all;
-%% Preparing file names
-path = 'data/House/';
-
-% specify which plots to show
-showEpipolar = false;
+%% Debug/partial result flags
 showSift = false;
-showPVM = false;
+showEpipolar = false;
+stopAfterFirstIteration = false;
+
+showPVM = true;
 % use example PVM from file, false runs on house images
 examplePVM = false;
 % number of consecutive images to stitch together for SFM
-nr_consec_imgs = 4;
+nr_consec_imgs = 48;
+
+%% Preparing file names
+path = 'data/House/';
 
 files = dir(path);
 %The initial files is taken twice (1->2 and end->1)
@@ -24,11 +25,10 @@ for i=3:length(files)
 end
 images{end} = files(3).name;
 
-%TODO - eliminate points from background -    %active-contour or sift param
-%% Load through all files TODO this comment makes little sense
 %% Initialize some variables
 isFirstIter = true;
-%TODO - do dynamic reallocation within loop
+%the maximum number of features that can appear per iteration -- this also
+%determines the size of PVM. If index out of bounds, increase this
 maxExpectedFeatures=2000;
 PVM=zeros((M-1)*2,maxExpectedFeatures);
 matchesf2Last=zeros(1,maxExpectedFeatures);
@@ -67,8 +67,11 @@ for i=1:M-1
         prevMatches = matches(1,:);
     end
 
-     [p_base, p_target] = InterestPoints(f1,f2,matches, -1,showSift,im1,im2);
-
+    [p_base, p_target] = InterestPoints(f1,f2,matches, 30,showSift,im1,im2);
+    if size(p_base,1)<8
+         warning('Less than 8 matching points found. Skipping iteration')
+         continue;
+    end
     %%  3.1 Eight Point Algorithm
     A = MakeA(p_base,p_target);
 
@@ -105,13 +108,13 @@ for i=1:M-1
     %% 3.end Calculate the epipolar lines and draw them    
     if showEpipolar
         %simple eight-point
-        drawEpipolar(F,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using simple eight-point algorithm');
+        drawEpipolar(F,p_base(1:8,:),im1,'Epipolar lines using simple eight-point algorithm');
 
         %normalized eight-point
-        drawEpipolar(F_prime,p_base(1:8,:),p_target(1:8,:),im1,im2,'Epipolar lines using normalized eight-point algorithm');
+        drawEpipolar(F_prime,p_base(1:8,:),im1,'Epipolar lines using normalized eight-point algorithm');
 
         %normalized RANSACed eight-point
-        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),p_target_rans(1:8,:),im1,im2,['Epipolar lines using eight-point algoirthm augmented by'...
+        drawEpipolar(F_prime_rans,p_base_rans(1:8,:),im1,['Epipolar lines using eight-point algoirthm augmented by'...
                 'normalization and RANSAC point selection']);
     end
 
@@ -149,6 +152,9 @@ for i=1:M-1
         end
     end
     
+    if stopAfterFirstIteration
+        return
+    end
     
     isFirstIter = false;
 end
@@ -175,7 +181,7 @@ if examplePVM
 
 end
 
-
+figure('name','3D Structure created');
 img_range = 1:2:nr_consec_imgs*2 -3;
 img_x = 0;
 [height, width] = size(PVM);
