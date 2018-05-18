@@ -48,10 +48,10 @@ function [p,pi,d1,d2] = InterestPoints(f1, f2, matches, n, show_matched_points,i
         imshow(cat(2, im1, im2));
 
         hold on;
-        x1 = f1(1,matched_points(1,:)) ;
-        x2 = f2(1,matched_points(2,:)) + size(im1,2) ;
-        y1 = f1(2,matched_points(1,:)) ;
-        y2 = f2(2,matched_points(2,:)) ;
+        x1 = f1(1,best_inliers(1,:)) ;
+        x2 = f2(1,best_inliers(2,:)) + size(im1,2) ;
+        y1 = f1(2,best_inliers(1,:)) ;
+        y2 = f2(2,best_inliers(2,:)) ;
 
         line([x1; x2], [y1; y2], 'LineWidth', 1);
         hold off;
