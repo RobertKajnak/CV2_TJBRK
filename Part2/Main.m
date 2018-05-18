@@ -59,7 +59,7 @@ for i=1:M-1
         prevMatches = matches(1,:);
     end
     
-    [p_base, p_target] = InterestPoints(f1,f2,matches,-1,showSift,im1,im2);
+    [p_base, p_target] = InterestPoints(f1,f2,matches,30,showSift,im1,im2);
     if size(p_base,1)<8
         warning('Less than 8 matching points found. Skipping iteration')
         continue;
